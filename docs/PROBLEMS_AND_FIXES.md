@@ -669,3 +669,102 @@ In Hasselblad XPan mode, the UI was locked to the 45mm main lens. The 30mm Ultra
    - Removed dead `odm/lib64/libpngwrapper.so` and `odm/lib64/libyuvwrapper.so` entries from `aox/manifest.json`, eliminating all `skip` warnings in `aox.log`.
    - Replaced all 6 upstream source revisions in `aox/manifest.json` with their true 40-character GitHub commit SHA-1 hashes and synced `.cache/aox/source.json` and `tests/fixtures/aox` via `python3 scripts/prepare_aox.py --fixtures`.
    - Updated `tests/test_aox.py` for OplusCamera `7.013.11` configs and ELF `DT_NEEDED` verification.
+
+---
+
+## 18. Sensor & Lens Feature Unlocks (OnePlus 9 & 9 Pro)
+
+### 18.1 A1: Ultra-Wide 4K @ 60fps Video (`0.6x` IMX766)
+- **Symptom**: On the OnePlus 9 (`lemonade`), selecting `4K·60` in Video mode restricted the camera to `1x` (`rear_main` only) and hid the `0.6x` Ultra-Wide option, despite the 50 MP Sony IMX766 Ultra-Wide sensor and `rear_sat` (`Device 4`) supporting `3840x2160` @ 60fps in hardware and `camera_unit_config`.
+- **Fix**: Set `com.oplus.feature.video.4k60fps.ultrawide.support` to `1` in `odm/etc/camera/config/oplus_camera_config` via `module/aox/edits.txt`.
+- **Result**: `4K·60` opens `Device 4` (`rear_sat`) with full `0.6x`–`10x` zoom support and records native 4K 60fps video on the IMX766 Ultra-Wide lens.
+
+### 18.2 A2: Ultra-Wide Long Exposure (`0.6x` IMX766) & ZSL RAW Reprocess Usecase Selection
+- **Symptom**:
+  1. Long Exposure mode only exposed the `1x` main lens on the OnePlus 9/9 Pro because `com.oplus.long.exposure.no.wide` was set to `1` in `oplus_camera_config`.
+  2. Setting `com.oplus.long.exposure.no.wide` to `0` enabled the `0.6x` button in `LongExposureMode`, but tapping `0.6x` (`rear_wide`, `logicalCameraId = 2`) resulted in a black viewfinder and `CHIUSECASE` error: `DefaultMatchingUsecaseSelection() Failed to match usecase. pSelectedUsecase is NULL` / `For cameraId = 2 CreateUsecaseObject failed`.
+- **Root Cause**: Disassembling `OExtensionModule::IsOPZSLStreamConfig(unsigned int, camera3_stream_configuration*)` at `0x2dfdc0` in `/vendor/lib64/hw/com.qti.chi.override.so` showed that it queries `[OemSelectUsecaseZSL]` in `/odm/etc/camera/CameraHWConfiguration.config` and tests `sensor_mask & (1 << logicalCameraId)`. For Long Exposure (`0x80aa` with 4 streams), `isMatch[2] = 0x80aa; 4; 0x0001` had `sensor_mask = 0x0001` (`1 << 0`, `rear_main` only), rejecting `logicalCameraId = 2` (`1 << 2 = 0x0004`, `rear_wide`).
+- **Fix**:
+  1. Added `tag|odm/etc/camera/config/oplus_camera_config|com.oplus.long.exposure.no.wide|Byte|1|*|0` to `module/aox/edits.txt`.
+  2. Added `ini|odm/etc/camera/CameraHWConfiguration.config|OemSelectUsecaseZSL|isMatch[2]|*|0x80aa;               4;             0x000D       # long exposure mode` to `module/aox/edits.txt` (enabling `0x80aa` ZSL usecase selection across `rear_main`, `rear_wide`, and `rear_tele`).
+- **Result**: Switching to `0.6x` in Long Exposure mode opens `Device 2` (`rear_wide`) with `selected use case = 3` (`PreviewZSL`) and captures full `4096x3072` multi-second long exposure photos on the IMX766 Ultra-Wide sensor.
+
+### 18.3 A3: Ultra Steady Pro (Wide-Angle Super EIS) (`0x8028` / `superEISProVideo`)
+- **Symptom**:
+  1. In `OplusCamera 7.013.11`, enabling **Ultra Steady** (`pref_video_super_eis_key` in the `SubSet` drawer) already routes directly to `rear_wide` (`logicalCameraId = 2`, `imx766`, `Mode[25] = 0x8028`, sensor mode `1` @ 30fps) at up to `4K·30` because `com.oplus.feature.video.super.eis.only.wide.support = 1` and `com.oplus.feature.video.super.eis.wide.open.default = 1`.
+  2. However, because `com.oplus.feature.video.super.eis.wide.support` was `"0"`, `SuperEISPresenter.I2()` and `G2()` (`zd/d.java`) returned `false`, causing `CommonVideoMode.af()` to return `false` (`Sj()` returned `"superEISVideo"` instead of `"superEISProVideo"` on the app side, while `ApsDataConvert` on the Unit SDK side returned `"superEISProVideo"`).
+  3. Additionally, in `SuperEISPresenter.L()` (`zd/d.java` line 358), frame-rate conflict checks could inadvertently auto-disable `Ultra Steady` unless `com.oplus.feature.video.super.eis.all.fps.support = 1` is set.
+- **Fix**:
+  1. Added `tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.video.super.eis.wide.support|Byte|1|*|1` to `module/aox/edits.txt`.
+  2. Added `tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.video.super.eis.all.fps.support|Byte|1|*|1` to `module/aox/edits.txt`.
+- **Result**: Enabling `Ultra Steady` activates `Ultra SteadyOn` (`com.oplus.camera:id/super_eis`) on `rear_wide` (`imx766`) with `operation_mode = 0x8028` (`32808`), aligns `CommonVideoMode` and `AlgoSwitchConfig` on `mCameraMode: superEISProVideo`, and records stabilized 4K 30fps (`3840x2160`) video cleanly.
+
+### 18.4 A4: Hyper-Lapse / Fast Video Multi-Lens Zoom (`com.oplus.feature.fast.video.sat.support`)
+- **Finding**: Standard **TIME-LAPSE** (`fastVideo`) uses `commonVideoSatHal` (`operation_mode = 33548`) and already provides full multi-camera SAT zoom (`0.6x`, `1x`, `2x`, `5x`) via `com.oplus.feature.fast.video.sat.support = 1`.
+- **Limitation on Android 17**: Tapping the optional Hyperlapse toggle (`pref_video_hyper_lapse_key`) switches the camera mode to `hyperlapseProVideo` (`0x80a5`). On Android 17 / SDK 37, this triggers a crash in `android.hardware.camera2.marshal.impl.MarshalQueryableSize$MarshalerSize.marshal` because `APSSuperEISNode` passes null `android.util.Size` metadata into the Camera2 capture request, corrupting GL texture deallocation. Stock OnePlus 9 only shipped with a single-point zoom table (`com.oplus.feature.hyper.lapse.zoom.list = 0.6`). Standard Time-Lapse SAT zoom across all lenses is operational without the crash.
+
+### 18.5 B1: Master Mode — "RAW Plus" / Multi-Frame SuperRAW (`com.oplus.feature.professional.super.raw.support`)
+- **Symptom**: In Master Mode (`MORE` -> `MASTER`), the top format selector only displayed `JPG` and standard single-exposure `RAW`. The computational multi-frame stacked RAW mode (`RAW Plus` / `RAW+`) was missing.
+- **Root Cause**: Stock `oplus_camera_config` disabled `com.oplus.feature.professional.super.raw.support` (`"0"`). In `OplusCamera 7.013.11`, `em/u1.java` and `em/v.java` gate `pref_super_raw_control_key` behind this boolean configuration tag.
+- **Fix**: Set `com.oplus.feature.professional.super.raw.support` to `1` in `odm/etc/camera/config/oplus_camera_config` via `module/aox/edits.txt`.
+- **Result**: `FormatRAW+` is displayed and selectable in the Master Mode format drawer. When captured, the APS pipeline executes `RealTimeFeatureZSLPreviewRaw_0` with `mSuperRawEnable: 1`, `previewdecision_bracket_mode: 14`, and `previewdecision_mfsr_frame_count: 8` (8-frame MFSR fusion), producing a high-dynamic-range `27.7 MB` multi-frame DNG with Hasselblad color profile metadata (`OP HB Color Profile 1`).
+
+### 18.6 B2: Night Mode 2x In-Sensor Zoom (`IZOOM`) Button (`com.oplus.night_insensor_zoom.point.2x.support` & `com.oplus.night.zoom.max.value.default`)
+- **Symptom**: In Night Mode (`NIGHT`), the viewfinder only offered `1x` zoom; the dedicated `2x` in-sensor zoom button (and multi-lens zoom) was absent.
+- **Root Cause**:
+  1. `com.oplus.night_insensor_zoom.point.2x.support` was disabled (`"0"`) in `oplus_camera_config`.
+  2. In `ab/n1.java` (line 661), when `cVar.T` is true (`com.oplus.night.mode.max.zoom.support = 1`), maximum zoom in Night Mode is evaluated via `CameraConfig.j("com.oplus.night.zoom.max.value.default", false)`. Because this vendor tag was missing in stock `oplus_camera_config`, it defaulted to `0.0f`, capping maximum zoom to `1.0f` and causing `o2.java` (`Float.compare(this.n, f4) >= 0`) to omit the `2x` button.
+- **Fix**:
+  1. Added `tag|odm/etc/camera/config/oplus_camera_config|com.oplus.night_insensor_zoom.point.2x.support|Byte|1|*|1` to `module/aox/edits.txt`.
+  2. Added `tag|odm/etc/camera/config/oplus_camera_config|com.oplus.night.zoom.max.value.default|Float|1|*|10.0` to `module/aox/edits.txt`.
+- **Result**: Night Mode displays `0.6x`, `1x`, and `2x` zoom buttons. Tapping `2x` commands `OPMetaManager::enableInSensorZoom: 1` in Qualcomm Chi HAL, capturing full `4000x3000` (12 MP) Night photos processed by ArcSoft SuperNight 8-frame multi-exposure fusion.
+
+### 18.7 B3: DCI-P3 Wide Color Gamut Capture (`com.oplus.feature.DCIP3.support`)
+- **Symptom**: Captured photos were saved in standard sRGB gamut without embedding the wide-gamut Display P3 ICC profile, losing vibrant color saturation and dynamic tone rendition on OLED panels.
+- **Root Cause**: Stock `oplus_camera_config` disabled `com.oplus.feature.DCIP3.support` (`"0"`). In `StorageDepositorFactory` (`storageprocessor/n.java`), `x1.d` (`IccProfile.writeJpegIccProfile`) was bypassed, preventing the ICC color profile from being injected into JPEG APP2 marker headers.
+- **Fix**: Added `tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.DCIP3.support|Byte|1|*|1` to `module/aox/edits.txt`.
+- **Result**: Photos are captured and saved with the native `Display P3` 548-byte ICC profile embedded in the JPEG metadata, ensuring accurate wide color gamut display across galleries and OLED screens.
+
+### 18.8 C1: Front Camera SuperNight Mode (`com.oplus.feature.front.supernight.support`)
+- **Symptom**: Night Mode was restricted to the rear multi-camera system; switching to the front-facing camera was unavailable in the UI.
+- **Root Cause & Technical Analysis**:
+  1. `com.oplus.feature.front.supernight.support` was set to `"0"` in stock `oplus_camera_config` on both OnePlus 9 (`lemonade`) and 9 Pro (`lemonadep`).
+  2. Enabling this tag exposes the camera switch toggle in Night Mode.
+  3. However, when switching to the front camera, Android CameraService aborted session configuration with `Camera3-InputStream: configureQueueLocked: 257: HAL sets max_buffer to 0. Must be at least 1. finishConfiguration: Unable to configure stream 0 queue: Function not implemented (-38)`.
+  4. Investigation into `/odm/etc/camera/config/camera_unit_config` revealed `front_night_case` had `[{"reprocess_input":"front_main"}, {"preview":"front_main"}, {"raw_output":"front_main"}, {"capture":"front_main"}]`. The Qualcomm CamX HAL driver for Sony IMX471 (Camera ID 1) sets `max_buffer = 0` because it lacks a hardware input reprocess stream pipeline.
+  5. Even when removing `reprocess_input`, APS algo `aps_algo_portrait_supernight` requests format 32 (RAW16), while CamX limits stream dimensions in binned sensor mode 3 (2328x1748), conflicting with the capture stream.
+- **Resolution**: Documented root cause explaining why OnePlus officially disabled front supernight on this platform.
+
+### 18.9 C2: Front Camera Panorama (`com.oplus.feature.front.panorama.support`)
+- **Symptom**: In Panorama mode (`MORE` -> `PANO`), the switch camera toggle was hidden, preventing wide-angle selfie panoramas.
+- **Root Cause**: `com.oplus.feature.front.panorama.support` was set to `"0"` in stock `oplus_camera_config`. The Sony IMX471 platform already contains tuning data for front panorama (`com.oplus.tunning.front.panorama.max.height = 1920`), and `panorama_case` in `camera_unit_config` uses `var_camera` (`preview` and `preview_frame` streams at `1440x1080`), matching mode `0x8007` (`sensor_mask = 0xFFFF`).
+- **Fix**: Added `tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.front.panorama.support|Byte|1|*|1` to `module/aox/edits.txt`.
+- **Result**: `Switch to Front Camera` button is active in `PANO` mode. Switching to the front camera initializes `PANO Front Camera preview` with real-time panorama guidance overlay, capturing and stitching wide selfie panoramic photos (`1600x1200` JPEG).
+
+### 18.10 D1: AI Highlight Video & Ultra Night Video Missing 64-bit Blob Limitation (`com.oplus.feature.ai.enhancement.video.support`)
+- **Symptom**: Enabling AI highlight video exposes the `Video Night Function` (`key_ultra_night_video`) toggle in the video sub-menu drawer. When toggled on, `com.oplus.camera` crashes immediately with a native abort (`SIGBUS` / `BUS_ADRALN` / `SIGSEGV`), and subsequent app launches crash continuously until MMKV preferences are purged.
+- **Root Cause & Technical Analysis**:
+  1. `key_ultra_night_video` configures camera stream mode `0x80ad` (`ultra_night_video`).
+  2. In `/odm/lib64/libAlgoInterface.so`, thread `preview_night_v` executes `android::APSNightVisionNode::doInit(android::AlgoPreviewProcessData*)`.
+  3. `APSNightVisionNode::doLoadlib()` attempts to dynamically load `/odm/lib64/libnightvision.so`.
+  4. Investigation across all partitions (`/system`, `/vendor`, `/odm`, `/product`) revealed that OnePlus only shipped `/odm/lib/libnightvision.so` (a 32-bit ELF ARM binary) on `lemonade` (SM8350); **no 64-bit build exists** in the stock ROM image.
+  5. Because `com.oplus.camera` executes as a 64-bit process (`/system/bin/app_process64` / arm64-v8a), dlopening the 32-bit library fails. `APSNightVisionNode::doInit` fails to validate the resulting function pointer and jumps to an unmapped/unaligned address (`pc 40f353f84111a5e3`, `esr 0x8a000000` PC Alignment Exception), fatally crashing the process.
+- **Resolution**:
+  - `com.oplus.feature.ai.enhancement.video.support` and `com.oplus.feature.ultra.night.video.support` must remain `"0"` on this device to prevent exposure of the crashing night video toggle.
+  - Native Live HDR Video is independently supported via `com.oplus.feature.video.live.hdr.support = 1`.
+
+### 18.11 D2: Video Portrait Bokeh & Neon Bokeh Flare (`com.oplus.video.only.blur.support` & `com.oplus.video.neon.support`)
+- **Symptom**: Real-time adjustable background blur (bokeh) in standard Video mode was hidden.
+- **Root Cause & Technical Verification**:
+  1. In `CameraHWConfiguration.config`, Qualcomm CamX mode 26 (`Mode[26] = 0x800B; 0x0001; 0x0008; 0 #Video Portrait`) and usecase mode 5 (`Mode[5] = 0x830B; 0x0000; 2 #Video portrait`) are fully configured in the hardware camera layer.
+  2. Both necessary 64-bit video blur algorithm libraries (`/odm/lib64/libarcsoft_scbokeh_video.so` and `/odm/lib64/libstblur_api.so`) are pre-installed in `/odm/lib64`.
+  3. The features were gated solely in software by `com.oplus.video.only.blur.support` and `com.oplus.video.neon.support` set to `"0"` in `oplus_camera_config`.
+- **Fix**:
+  1. Add `tag|odm/etc/camera/config/oplus_camera_config|com.oplus.video.only.blur.support|Byte|1|*|1` to `module/aox/edits.txt`.
+  2. Add `tag|odm/etc/camera/config/oplus_camera_config|com.oplus.video.neon.support|Byte|1|*|1` to `module/aox/edits.txt`.
+- **Result**: `pref_video_blur_menu` is active in `com.oplus.camera`, allowing real-time depth blur aperture adjustments during video recording.
+
+
+
+
+

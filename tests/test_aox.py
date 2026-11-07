@@ -88,7 +88,25 @@ class Installer(unittest.TestCase):
                 res_tags, head_tags = tags(result), tags(head)
                 custom = {"com.oplus.feature.video.live.hdr.support": "1",
                           "com.oplus.feature.video.live.hdr.except.8k.support": "1",
-                          "com.oplus.feature.breeno.scan": "0"}
+                          "com.oplus.feature.breeno.scan": "0",
+                          "com.oplus.feature.video.4k60fps.ultrawide.support": "1",
+                          "com.oplus.long.exposure.no.wide": "0",
+                          "com.oplus.feature.video.super.eis.wide.support": "1",
+                          "com.oplus.feature.video.super.eis.all.fps.support": "1",
+                          "com.oplus.feature.professional.super.raw.support": "1",
+                          "com.oplus.night_insensor_zoom.point.2x.support": "1",
+                          "com.oplus.night.zoom.max.value.default": "10.0",
+                          "com.oplus.feature.DCIP3.support": "1",
+                          "com.oplus.feature.front.panorama.support": "1",
+                          "com.oplus.video.only.blur.support": "1",
+                          "com.oplus.video.neon.support": "1",
+                          "com.oplus.video.focus.track.30fps.only": "0",
+                          "com.oplus.video.60fps.track.focus.support": "1",
+                          "com.oplus.feature.video.4k30fps.filter.support": "1",
+                          "com.oplus.director.filter.support": "1",
+                          "com.oplus.support.professional.mode.in.headline": "1",
+                          "com.oplus.feature.flash.full.zoom.support": "1",
+                          "com.oplus.feature.groupshot.support": "1"}
                 for k, v in head_tags.items():
                     if k not in custom:
                         self.assertEqual(res_tags.get(k), v, k)
@@ -126,7 +144,25 @@ class Installer(unittest.TestCase):
                 res_tags, head_tags = tags(result), tags(head)
                 custom = {"com.oplus.feature.video.live.hdr.support": "1",
                           "com.oplus.feature.video.live.hdr.except.8k.support": "1",
-                          "com.oplus.feature.breeno.scan": "0"}
+                          "com.oplus.feature.breeno.scan": "0",
+                          "com.oplus.feature.video.4k60fps.ultrawide.support": "1",
+                          "com.oplus.long.exposure.no.wide": "0",
+                          "com.oplus.feature.video.super.eis.wide.support": "1",
+                          "com.oplus.feature.video.super.eis.all.fps.support": "1",
+                          "com.oplus.feature.professional.super.raw.support": "1",
+                          "com.oplus.night_insensor_zoom.point.2x.support": "1",
+                          "com.oplus.night.zoom.max.value.default": "10.0",
+                          "com.oplus.feature.DCIP3.support": "1",
+                          "com.oplus.feature.front.panorama.support": "1",
+                          "com.oplus.video.only.blur.support": "1",
+                          "com.oplus.video.neon.support": "1",
+                          "com.oplus.video.focus.track.30fps.only": "0",
+                          "com.oplus.video.60fps.track.focus.support": "1",
+                          "com.oplus.feature.video.4k30fps.filter.support": "1",
+                          "com.oplus.director.filter.support": "1",
+                          "com.oplus.support.professional.mode.in.headline": "1",
+                          "com.oplus.feature.flash.full.zoom.support": "1",
+                          "com.oplus.feature.groupshot.support": "1"}
                 for k, v in head_tags.items():
                     if k not in custom:
                         self.assertEqual(res_tags.get(k), v, k)

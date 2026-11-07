@@ -16,6 +16,24 @@
 # release, 10-bit HEIC/video, Dolby Vision, filters, and cross-window blur.
 tag|odm/etc/camera/config/oplus_camera_config|com.oplus.fuji.style.filter.support|Byte|1|*|1
 only|lemonade|tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.video.4k.60fps.support|Byte|1|*|1
+tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.video.4k60fps.ultrawide.support|Byte|1|*|1
+tag|odm/etc/camera/config/oplus_camera_config|com.oplus.long.exposure.no.wide|Byte|1|*|0
+tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.video.super.eis.wide.support|Byte|1|*|1
+tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.video.super.eis.all.fps.support|Byte|1|*|1
+tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.professional.super.raw.support|Byte|1|*|1
+tag|odm/etc/camera/config/oplus_camera_config|com.oplus.night_insensor_zoom.point.2x.support|Byte|1|*|1
+tag|odm/etc/camera/config/oplus_camera_config|com.oplus.night.zoom.max.value.default|Float|1|*|10.0
+tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.DCIP3.support|Byte|1|*|1
+tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.front.panorama.support|Byte|1|*|1
+tag|odm/etc/camera/config/oplus_camera_config|com.oplus.video.only.blur.support|Byte|1|*|1
+tag|odm/etc/camera/config/oplus_camera_config|com.oplus.video.neon.support|Byte|1|*|1
+tag|odm/etc/camera/config/oplus_camera_config|com.oplus.video.focus.track.30fps.only|Byte|1|*|0
+tag|odm/etc/camera/config/oplus_camera_config|com.oplus.video.60fps.track.focus.support|Byte|1|*|1
+tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.video.4k30fps.filter.support|Byte|1|*|1
+tag|odm/etc/camera/config/oplus_camera_config|com.oplus.director.filter.support|Byte|1|*|1
+tag|odm/etc/camera/config/oplus_camera_config|com.oplus.support.professional.mode.in.headline|Byte|1|*|1
+tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.flash.full.zoom.support|Byte|1|*|1
+tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.groupshot.support|Byte|1|*|1
 tag|odm/etc/camera/config/oplus_camera_config|com.oplus.portrait.master.filter.type.list|String|3|*|Radiance.cube.rgb.bin,Serenity.cube.rgb.bin,Emerald.cube.rgb.bin
 tag|odm/etc/camera/config/oplus_camera_config|com.oplus.camera.livephoto.color.dataspace.value|String|3|*|1,2,2
 tag|odm/etc/camera/config/oplus_camera_config|com.oplus.support.dolby.video.live.shot|Byte|1|*|1
@@ -94,6 +112,7 @@ only|lemonadep|tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.v
 # keep the main sensor streaming while the zoom moves below 1x
 only|lemonade|ini|odm/etc/camera/CameraHWConfiguration.config|SatSmoothZoom|closeSlaveThresholdTime|-|1
 ini|odm/etc/camera/CameraHWConfiguration.config|UltraWideStrategy|fixActiveMapList|0x1|0x3
+ini|odm/etc/camera/CameraHWConfiguration.config|OemSelectUsecaseZSL|isMatch[2]|*|0x80aa;               4;             0x000D       # long exposure mode
 only|lemonade|zoommin|odm/etc/camera/CameraHWConfiguration.config|ZoomRange|custom.video.60fps.zoom.range|custom.video.zoom.range|1.0
 # mode usecase mappings for 8K 2-stream, HDR + photo, Dolby Vision + photo
 only|lemonade|block|odm/etc/camera/CameraHWConfiguration.config|mode-usecase-lemonade
