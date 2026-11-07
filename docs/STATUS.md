@@ -23,9 +23,9 @@ SELinux: **Enforcing**
   - *Status*: **VERIFIED & OPERATIONAL** (Standard `TIME-LAPSE` (`fastVideo`) uses `commonVideoSatHal` with full SAT multi-camera zoom (`0.6x`, `1x`, `2x`, `5x`). The Hyperlapse EIS toggle limitation under Android 17 Camera2 marshaling is fully documented).
 
 ### Category B: Main Sensor (`Sony IMX689` / `IMX789`) & Master / RAW Capabilities
-- [x] **B1. Master Mode — Hasselblad RAW Mode** (`com.oplus.feature.professional.raw.support = 1`)
-  - *Goal*: Provide native single-exposure 12-bit uncompressed RAW DNG capture with Hasselblad color profile in Master Mode without duplicate UI format menus.
-  - *Status*: **VERIFIED & OPERATIONAL** (`FormatRAW` toggle in Master Mode captures native 12-bit DNG files with Hasselblad color calibration metadata. `com.oplus.feature.professional.super.raw.support` is disabled to prevent duplicate concurrent RAW format drawers).
+- [x] **B1. Master Mode — Unified Format Menu (`JPG` / `RAW` / `RAW+`)** (`com.oplus.feature.professional.raw.support = 0`, `com.oplus.feature.professional.super.raw.support = 1`, `com.oplus.feature.raw.camera.type.support = camera_main,camera_ultra_wide,camera_tele`)
+  - *Goal*: Provide a single, clean format selector in Master Mode offering standard JPEG, native 12-bit single-frame RAW, and computational 8-frame stacked SuperRAW (`RAW+`) with Hasselblad color profile without duplicate UI format menus.
+  - *Status*: **VERIFIED & OPERATIONAL** (Setting `com.oplus.feature.professional.raw.support = 0` eliminates the legacy 2-state duplicate format toggle, while `com.oplus.feature.professional.super.raw.support = 1` and `com.oplus.feature.raw.camera.type.support` activate the single unified `[JPG, RAW, RAW+]` drawer. Capturing `RAW+` executes 8-frame MFSR raw bracketing, producing a 28.1MB computational DNG with `OP HB Color Profile 1`).
 - [x] **B2. Night Mode 2x In-Sensor Zoom (`IZOOM`) Button** (`com.oplus.night_insensor_zoom.point.2x.support = 1` & `com.oplus.night.zoom.max.value.default = 10.0`)
   - *Goal*: Enable the dedicated `2x` zoom point in Night Mode utilizing the 48MP IMX689 in-sensor crop (`Mode[41]`).
   - *Status*: **VERIFIED & ENABLED** (`0.6x`, `1x`, and `2x` zoom buttons displayed in Night Mode; tapping `2x` activates `OPMetaManager: enableInSensorZoom: 1` and `ControlZoomRatio: 5.000000`; captured 12MP 4000x3000 Night photo with ArcSoft SuperNight 8-frame HDR fusion).
@@ -102,11 +102,12 @@ SELinux: **Enforcing**
   3. Stock OnePlus 9 hardware only shipped with a single-point zoom table (`com.oplus.feature.hyper.lapse.zoom.list = 0.6`) without multi-lens calibration tables for Hyperlapse mode.
 - **Resolution**: TIME-LAPSE mode already provides full SAT multi-camera zoom across `0.6x`, `1x`, `2x`, and `5x` lenses. The Hyperlapse toggle limitation on Android 17 is documented and standard Time-Lapse SAT zoom is verified operational.
 
-### B1. Master Mode — Hasselblad RAW Mode & Mutual Exclusion
+### B1. Master Mode — Unified Format Menu (`JPG` / `RAW` / `RAW+`)
 - **Root Cause & Resolution**:
-  1. Setting `com.oplus.feature.professional.super.raw.support = 1` while stock `com.oplus.feature.professional.raw.support = 1` remained active caused OplusCamera to register two simultaneous format observers (`pref_raw_control_key` and `pref_super_raw_control_key`), showing two format menus (one with `[JPG, RAW]` and one with `[JPG, RAW, RAW+]`).
-  2. In addition, `pref_super_raw_control_key` in `em/u1.java` checks `CameraConfig.z(str3, "com.oplus.feature.raw.camera.type.support")`, which is not defined in the SM8350 platform configuration.
-  3. Reverting `com.oplus.feature.professional.super.raw.support` to stock `0` ensures a single, clean format selector (`JPG` / `RAW`) in Master Mode that captures native 12-bit uncompressed DNG files with Hasselblad color profile without UI duplicates.
+  1. In `OplusCamera 7.013.11`, `em/u1.java` and `em/v.java` register `pref_raw_control_key` (2-state `[JPG, RAW]`) when `com.oplus.feature.professional.raw.support == 1`, and `pref_super_raw_control_key` (3-state `[JPG, RAW, RAW+]`) when `com.oplus.feature.professional.super.raw.support == 1`.
+  2. If both were enabled simultaneously, two format controllers appeared in the UI.
+  3. Setting `com.oplus.feature.professional.raw.support = 0`, `com.oplus.feature.professional.super.raw.support = 1`, and defining `com.oplus.feature.raw.camera.type.support = camera_main,camera_ultra_wide,camera_tele` suppresses the duplicate legacy toggle and activates the unified 3-option format menu (`[JPG, RAW, RAW+]`).
+  4. Capture verification: Selecting `FormatRAW+` in Master Mode commands APS `RealTimeFeatureZSLPreviewRaw_0` with `mSuperRawEnable: 1` and `previewdecision_mfsr_frame_count: 8`, capturing and saving `IMG20261107225834.dng` (`28.1 MB`) containing `OP HB Color Profile 1` on model `LE2115`.
 
 ### B2. Night Mode 2x In-Sensor Zoom (`IZOOM`) Button (`com.oplus.night_insensor_zoom.point.2x.support` & `com.oplus.night.zoom.max.value.default`)
 - **Root Cause**:

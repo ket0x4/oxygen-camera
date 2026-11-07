@@ -20,6 +20,9 @@ tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.video.4k60fps.ul
 tag|odm/etc/camera/config/oplus_camera_config|com.oplus.long.exposure.no.wide|Byte|1|*|0
 tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.video.super.eis.wide.support|Byte|1|*|1
 tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.video.super.eis.all.fps.support|Byte|1|*|1
+tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.professional.raw.support|Byte|1|*|0
+tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.professional.super.raw.support|Byte|1|*|1
+tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.raw.camera.type.support|String|3|*|camera_main,camera_ultra_wide,camera_tele
 tag|odm/etc/camera/config/oplus_camera_config|com.oplus.night_insensor_zoom.point.2x.support|Byte|1|*|1
 tag|odm/etc/camera/config/oplus_camera_config|com.oplus.night.zoom.max.value.default|Float|1|*|10.0
 tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.DCIP3.support|Byte|1|*|1

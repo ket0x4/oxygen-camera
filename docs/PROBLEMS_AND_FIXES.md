@@ -704,13 +704,16 @@ In Hasselblad XPan mode, the UI was locked to the 45mm main lens. The 30mm Ultra
 - **Limitation on Android 17**: Tapping the optional Hyperlapse toggle (`pref_video_hyper_lapse_key`) switches the camera mode to `hyperlapseProVideo` (`0x80a5`). On Android 17 / SDK 37, this triggers a crash in `android.hardware.camera2.marshal.impl.MarshalQueryableSize$MarshalerSize.marshal` because `APSSuperEISNode` passes null `android.util.Size` metadata into the Camera2 capture request, corrupting GL texture deallocation. Stock OnePlus 9 only shipped with a single-point zoom table (`com.oplus.feature.hyper.lapse.zoom.list = 0.6`). Standard Time-Lapse SAT zoom across all lenses is operational without the crash.
 
 ### 18.5 B1: Master Mode — RAW Format Selector & Double Menu Resolution
-- **Symptom**: If `com.oplus.feature.professional.super.raw.support` was enabled alongside stock `com.oplus.feature.professional.raw.support`, Master Mode displayed two conflicting format menus simultaneously: one menu showing `[JPG, RAW]` and a second drawer showing `[JPG, RAW, RAW+]`.
+- **Symptom**: If `com.oplus.feature.professional.super.raw.support` was enabled while `com.oplus.feature.professional.raw.support` remained `1`, Master Mode displayed two conflicting format menus simultaneously: one menu showing `[JPG, RAW]` and a second drawer showing `[JPG, RAW, RAW+]`.
 - **Root Cause**:
   1. In `OplusCamera 7.013.11`, `em/u1.java` (lines 665, 685) and `em/v.java` (lines 973, 993) independently register `pref_super_raw_control_key` (gated by `com.oplus.feature.professional.super.raw.support`) and `pref_raw_control_key` (gated by `com.oplus.feature.professional.raw.support`).
-  2. Stock OnePlus 9/9 Pro `oplus_camera_config` sets `com.oplus.feature.professional.raw.support = 1` and `com.oplus.feature.professional.super.raw.support = 0`.
-  3. When both were set to `1`, the UI registered two concurrent format observers, cluttering Master mode with duplicate RAW options. Furthermore, `em/u1.java` gates `pref_super_raw_control_key` capture behind `CameraConfig.z(..., "com.oplus.feature.raw.camera.type.support")`, which is not populated on SM8350.
-- **Fix**: Revert `com.oplus.feature.professional.super.raw.support` to stock `0` in `module/aox/edits.txt`.
-- **Result**: Exactly one unified, clean format selector (`JPG` / `RAW`) is displayed in Master Mode, capturing native 12-bit uncompressed RAW DNGs with Hasselblad color calibration across Main and Ultra-Wide lenses without duplicate UI elements.
+  2. Setting both to `1` registers two format controllers at the same time.
+  3. In addition, `em/u1.java` (line 790) checks `CameraConfig.z(str3, "com.oplus.feature.raw.camera.type.support")` to validate lens compatibility for SuperRAW capture.
+- **Fix**:
+  1. Set `com.oplus.feature.professional.raw.support` to `0` in `module/aox/edits.txt` to suppress the legacy 2-option duplicate format toggle.
+  2. Set `com.oplus.feature.professional.super.raw.support` to `1` in `module/aox/edits.txt`.
+  3. Add `tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.raw.camera.type.support|String|3|*|camera_main,camera_ultra_wide,camera_tele` to `module/aox/edits.txt`.
+- **Result**: Exactly one unified, clean format drawer (`JPG` / `RAW` / `RAW+`) is displayed in Master Mode. Tapping `FormatRAW+` triggers 8-frame multi-frame RAW stacking (`previewdecision_mfsr_frame_count: 8`), outputting a 28.1 MB computational Linear DNG with `OP HB Color Profile 1` across Main and Ultra-Wide lenses without any duplicate UI elements.
 
 ### 18.6 B2: Night Mode 2x In-Sensor Zoom (`IZOOM`) Button (`com.oplus.night_insensor_zoom.point.2x.support` & `com.oplus.night.zoom.max.value.default`)
 - **Symptom**: In Night Mode (`NIGHT`), the viewfinder only offered `1x` zoom; the dedicated `2x` in-sensor zoom button (and multi-lens zoom) was absent.
