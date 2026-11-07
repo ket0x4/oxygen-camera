@@ -9,15 +9,11 @@ else
     ROOT_MNGR="Root"
 fi
 ui_print "Root manager: $ROOT_MNGR"
-if [ -n "$(getprop ro.crdroid.build.version)$(getprop ro.crdroid.version)$(getprop ro.crdroid.device)" ]; then
-    ui_print "ROM: crDroid $(getprop ro.crdroid.version)"
-else
-    ui_print "ROM: $(getprop ro.build.display.id)"
-fi
+ui_print "ROM: $(getprop ro.build.display.id)"
 # OnePlus 9 (lemonade) and 9 Pro (lemonadep): builds report the
 # codename or the marketing name.
 camera_device=
-for prop in ro.product.vendor.device ro.product.device ro.build.product ro.crdroid.device; do
+for prop in ro.product.vendor.device ro.product.device ro.build.product; do
     case "$(getprop "$prop")" in
         lemonade|lemonadep|OnePlus9|OnePlus9Pro) camera_device=$(getprop "$prop"); break ;;
     esac
@@ -40,36 +36,8 @@ elif [ "$CAMERA_SDK" -eq 37 ]; then
 else
     ui_print "SDK $CAMERA_SDK: newer Android support is experimental."
 fi
-[ -f /system/framework/oplus-fwk.jar ] || abort "Missing OPlus compatibility framework (oplus-fwk.jar)."
 [ -x /system/bin/mkfs.erofs ] || [ -x /system/bin/mkfs.ext4 ] || abort "Missing filesystem tools (mkfs.erofs / mkfs.ext4)."
 grep -qw overlay /proc/filesystems || abort "This kernel needs OverlayFS support."
-if [ -f "$MODPATH/gralloc-source.json" ]; then
-    CAMERA_GRALLOC_SOURCE=$(sed -n 's/.*"source_sha256": "\([0-9a-f]*\)".*/\1/p' "$MODPATH/gralloc-source.json")
-    CAMERA_GRALLOC_PATCHED=$(sed -n 's/.*"patched_sha256": "\([0-9a-f]*\)".*/\1/p' "$MODPATH/gralloc-source.json")
-    [ "${#CAMERA_GRALLOC_SOURCE}" -eq 64 ] && [ "${#CAMERA_GRALLOC_PATCHED}" -eq 64 ] || abort "Invalid graphics trial manifest."
-    CAMERA_GRALLOC_PREVIOUS=$(sed -n 's/.*"previous_patched_sha256": "\([0-9a-f]*\)".*/\1/p' "$MODPATH/gralloc-source.json")
-    [ "${#CAMERA_GRALLOC_PREVIOUS}" -eq 64 ] || abort "Invalid previous graphics trial checksum."
-    CAMERA_GRALLOC_CURRENT=$(sha256sum /vendor/lib64/libgrallocutils.so | cut -d ' ' -f 1)
-    case "$CAMERA_GRALLOC_CURRENT" in
-        "$CAMERA_GRALLOC_SOURCE"|"$CAMERA_GRALLOC_PATCHED"|"$CAMERA_GRALLOC_PREVIOUS") ;;
-        *) abort "Graphics trial does not match this ROM library; installation cancelled." ;;
-    esac
-    ui_print "Graphics format trial: only legacy 10-bit camera requests are changed."
-fi
-if [ -f "$MODPATH/gralloc32-source.json" ]; then
-    [ -f "$MODPATH/gralloc-source.json" ] || abort "ARMv7 graphics trial requires ARM64 graphics trial."
-    CAMERA_GRALLOC32_SOURCE=$(sed -n 's/.*"source_sha256": "\([0-9a-f]*\)".*/\1/p' "$MODPATH/gralloc32-source.json")
-    CAMERA_GRALLOC32_PATCHED=$(sed -n 's/.*"patched_sha256": "\([0-9a-f]*\)".*/\1/p' "$MODPATH/gralloc32-source.json")
-    CAMERA_GRALLOC32_PREVIOUS=$(sed -n 's/.*"previous_patched_sha256": "\([0-9a-f]*\)".*/\1/p' "$MODPATH/gralloc32-source.json")
-    [ "${#CAMERA_GRALLOC32_SOURCE}" -eq 64 ] && [ "${#CAMERA_GRALLOC32_PATCHED}" -eq 64 ] || abort "Invalid ARMv7 graphics trial manifest."
-    [ "${#CAMERA_GRALLOC32_PREVIOUS}" -eq 64 ] || abort "Invalid previous ARMv7 graphics trial checksum."
-    CAMERA_GRALLOC32_CURRENT=$(sha256sum /vendor/lib/libgrallocutils.so | cut -d ' ' -f 1)
-    case "$CAMERA_GRALLOC32_CURRENT" in
-        "$CAMERA_GRALLOC32_SOURCE"|"$CAMERA_GRALLOC32_PATCHED"|"$CAMERA_GRALLOC32_PREVIOUS") ;;
-        *) abort "ARMv7 graphics trial does not match this ROM library; installation cancelled." ;;
-    esac
-    ui_print "Matching ARMv7 graphics trial for media services."
-fi
 ui_print "Installing Oplus Camera $(cat "$MODPATH/aox/app-version.txt" 2>/dev/null) for the OnePlus 9 / 9 Pro."
 ui_print "Module version $(sed -n 's/^version=//p' "$MODPATH/module.prop")."
 ui_print "Standalone mounting: Mountify is not required."

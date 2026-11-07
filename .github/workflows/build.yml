@@ -108,7 +108,7 @@ jobs:
             old=$(echo "$tags" | grep -- '-cam4-' || true)
           fi
           {
-            echo "OplusCamera $app for the OnePlus 9 / 9 Pro on crDroid, module $VERSION,"
+            echo "OplusCamera $app for the OnePlus 9 / 9 Pro (Android 16 / 17), module $VERSION,"
             echo "built from \`${GITHUB_SHA::7}\` ($(git log -1 --format=%s))."
             echo
             echo "Install \`OplusCamera-OP9-$VERSION.zip\` in KernelSU Next and reboot. The"

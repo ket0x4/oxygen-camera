@@ -1,6 +1,6 @@
 # Oplus Camera for OnePlus 9 / 9 Pro
 
-A standalone **KernelSU Next** module that ports **OplusCamera 7.013.11** (ColorOS 16 / OxygenOS 16) to the OnePlus 9 (`lemonade`) and OnePlus 9 Pro (`lemonadep`) running **crDroid** (Android 16 / 17) with **SELinux Enforcing**.
+A standalone **KernelSU Next** (and APatch / Magisk) module that ports **OplusCamera 7.013.11** (ColorOS 16 / OxygenOS 16) to the OnePlus 9 (`lemonade`) and OnePlus 9 Pro (`lemonadep`) running any **Android 16 or 17** custom ROM with **SELinux Enforcing**.
 
 No third-party metamodules (Mountify, OverlayFS managers, etc.) are required—the module builds its own compressed read-only **EROFS** (or `ext4`) image at install time, mounts it via OverlayFS before Android scans packages, and automatically configures KernelSU App Profile visibility.
 
@@ -39,7 +39,7 @@ Verified on OnePlus 9 (`LE2111` / `LE2115`), **SELinux Enforcing**, crDroid 16 /
 - **Action Button**: Tapping **Action** on the module card in KernelSU Next prints live diagnostics (`SELinux`, `camera.img` EROFS/ext4 size, Power HAL UAH status, camera daemon `nice` priority, ART `speed` compilation status), applies any missing optimizations, and launches the camera.
 
 ### Safety Checks & Logs
-- The installer verifies that the device is `lemonade` or `lemonadep`, running crDroid on Android 16+, with `/system/framework/oplus-fwk.jar` and kernel OverlayFS support.
+- The installer verifies that the device is `lemonade` or `lemonadep` running Android 16+ (SDK 36+) with kernel OverlayFS support.
 - If a boot ever fails to complete, `post-fs-data.sh` automatically disables the module on the next boot.
 - Logs are stored in `/data/adb/modules/ooscamera_op9/`:
   - `aox.log` — per-file installer and config edit decisions
