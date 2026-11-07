@@ -2598,6 +2598,127 @@
       ],
       "sha256": "de6bc6914a35d62855694362893b061e361b146c8b15403e2b2a8dd2c9bf9c68",
       "size": 24748129
+    },
+    {
+      "path": "odm/lib64/libAncHumBokeh.so",
+      "source": "vendor",
+      "group": "library",
+      "kind": "library",
+      "install": "add",
+      "sha256": "beceaeff4234118f6a415308caf3cdb23e7e9121eb18415414332d6bfd6e792c",
+      "size": 2910576,
+      "needed": [
+        "liblog.so",
+        "libEGL.so",
+        "libGLESv3.so",
+        "libdl.so",
+        "libz.so",
+        "libm.so",
+        "libc.so"
+      ]
+    },
+    {
+      "path": "odm/lib64/libAncHumBokehPost.so",
+      "source": "vendor",
+      "group": "library",
+      "kind": "library",
+      "install": "add",
+      "sha256": "71e1cd53895b39f4f85e92af7b3fcd4a126afa70fe5cd12da5bf3708705e4070",
+      "size": 2910576,
+      "needed": [
+        "liblog.so",
+        "libEGL.so",
+        "libGLESv3.so",
+        "libdl.so",
+        "libz.so",
+        "libm.so",
+        "libc.so"
+      ]
+    },
+    {
+      "path": "odm/lib64/libancbase_rt_bokeh.so",
+      "source": "vendor",
+      "group": "library",
+      "kind": "library",
+      "install": "add",
+      "sha256": "4eaaadc54e3d08b9c21b1d0d068de783ebf01dd64accf8a9001e194cb1fd559b",
+      "size": 13495360,
+      "needed": [
+        "libm.so",
+        "liblog.so",
+        "libz.so",
+        "libdl.so",
+        "libc.so"
+      ]
+    },
+    {
+      "path": "odm/lib64/libAncHumVideoBase.so",
+      "source": "vendor",
+      "group": "library",
+      "kind": "library",
+      "install": "add",
+      "sha256": "b8478bf02158143fce84bb1a48d09c8bd7bf75a939480c0bde6292e896376c82",
+      "size": 67592,
+      "needed": [
+        "liblog.so",
+        "libEGL.so",
+        "libGLESv3.so",
+        "libdl.so",
+        "libz.so",
+        "libnativewindow.so",
+        "libm.so",
+        "libc.so"
+      ]
+    },
+    {
+      "path": "odm/lib64/libAncFilter.so",
+      "source": "vendor",
+      "group": "library",
+      "kind": "library",
+      "install": "add",
+      "sha256": "137d5221d2a28cfd9d3f08c1183067bfd1b37c8d43cb96daae612a2ebc8e77a7",
+      "size": 1186112,
+      "needed": [
+        "liblog.so",
+        "libEGL.so",
+        "libGLESv3.so",
+        "libm.so",
+        "libdl.so",
+        "libc.so"
+      ]
+    },
+    {
+      "path": "odm/lib64/libfastov_dsp.so",
+      "source": "vendor",
+      "group": "library",
+      "kind": "library",
+      "install": "add",
+      "sha256": "8475f0f8e3ff36b1c34a555b0a907635e94b0418926e9a3c02c72b3c7bb673cc",
+      "size": 41184,
+      "needed": [
+        "libdl.so",
+        "liblog.so",
+        "libcdsprpc.so",
+        "libm.so",
+        "libc.so"
+      ]
+    },
+    {
+      "path": "odm/lib64/libnightvision.so",
+      "source": "vendor",
+      "group": "library",
+      "kind": "library",
+      "install": "add",
+      "sha256": "880efd3a366c4b81d4e8f0ecc4b711f91feaef8d4a59e98b4affaa05492b6a31",
+      "size": 7413545,
+      "needed": [
+        "liblog.so",
+        "libcdsprpc.so",
+        "libfastov_dsp.so",
+        "libm.so",
+        "libdl.so",
+        "libc.so"
+      ]
     }
   ]
 }

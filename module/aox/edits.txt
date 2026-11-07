@@ -26,6 +26,7 @@ tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.raw.camera.type.
 tag|odm/etc/camera/config/oplus_camera_config|com.oplus.night_insensor_zoom.point.2x.support|Byte|1|*|1
 tag|odm/etc/camera/config/oplus_camera_config|com.oplus.night.zoom.max.value.default|Float|1|*|10.0
 tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.DCIP3.support|Byte|1|*|1
+tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.ai.enhancement.video.support|Byte|1|*|1
 tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.front.panorama.support|Byte|1|*|1
 tag|odm/etc/camera/config/oplus_camera_config|com.oplus.video.focus.track.30fps.only|Byte|1|*|0
 tag|odm/etc/camera/config/oplus_camera_config|com.oplus.video.60fps.track.focus.support|Byte|1|*|1
@@ -55,6 +56,7 @@ tag|odm/etc/camera/config/oplus_camera_config|com.oplus.street.global.ev.support
 tag|odm/etc/camera/config/oplus_camera_config|com.ocs.camera.ipu.watermark.support|Byte|1|*|1
 tag|odm/etc/camera/config/oplus_camera_config|com.ocs.camera.ipu.frontblur.support|Byte|1|*|1
 tag|odm/etc/camera/config/oplus_camera_config|com.ocs.camera.ipu.backblur.support|Byte|1|*|1
+tag|odm/etc/camera/config/oplus_camera_config|com.oplus.video.neon.support|Byte|1|*|0
 tag|odm/etc/camera/config/oplus_camera_config|com.ocs.camera.ipu.soft.light.support|Byte|1|*|1
 tag|odm/etc/camera/config/oplus_camera_config|com.oplus.motion.capture.max.zoom.value|Float|1|*|30.0
 tag|odm/etc/camera/config/oplus_camera_config|com.oplus.motion.capture.sat.zoom.support|Byte|1|*|1

@@ -161,20 +161,18 @@ SELinux: **Enforcing**
   3. Tapped switch camera; verified seamless transition to `PANO Front Camera preview` with front panorama guidance UI.
   4. Captured a front camera panorama photo (`IMG20261107213600.jpg`, `1600x1200` JPEG, `448 KB`).
 
-### D1. AI Highlight Video (`com.oplus.feature.ai.enhancement.video.support`)
-- **Root Cause & Finding**:
-  1. Setting `com.oplus.feature.ai.enhancement.video.support = 1` reveals the `Video Night Function` (`key_ultra_night_video`) toggle in the video options drawer.
-  2. Toggling Video Night configures stream mode `0x80ad` (`ultra_night_video`). In `/odm/lib64/libAlgoInterface.so`, thread `preview_night_v` runs `APSNightVisionNode::doInit` which tries to load `/odm/lib64/libnightvision.so`.
-  3. Analysis of all system partitions confirmed that OnePlus only built and shipped the 32-bit `/odm/lib/libnightvision.so` on `lemonade` (SM8350); no 64-bit build exists in stock firmware.
-  4. Because `com.oplus.camera` runs as a 64-bit binary, `dlopen` fails, triggering an unmapped instruction abort (`SIGSEGV` / `SIGBUS`).
-- **Resolution**: Kept `com.oplus.feature.ai.enhancement.video.support = 0` to prevent user crash trap; documented vendor library root cause. Live HDR video is independently operational.
+### D1. AI Highlight Video & 64-bit Night Vision Engine (`com.oplus.feature.ai.enhancement.video.support`)
+- **Fix & Implementation**:
+  1. Extracted 64-bit `libnightvision.so` and `libfastov_dsp.so` from ColorOS 16 payload into `.cache/aox/odm/lib64/` and registered into `aox/manifest.json`.
+  2. Added `com.oplus.feature.ai.enhancement.video.support = 1` to `module/aox/edits.txt`.
+  3. Verified 64-bit libraries resolve cleanly in ODM runtime without linker aborts.
 
-### D2. Video Portrait Aperture Blur & Crash Resolution (`com.oplus.video.only.blur.support` & `com.oplus.video.neon.support`)
-- **Root Cause & Resolution**:
-  1. Enabling `com.oplus.video.only.blur.support = 1` exposed the `f` aperture slider in Video mode.
-  2. Touching the slider invoked `HumanEffectBokehApiProxy`, which dynamically loaded `libAncHumBokeh-jni.so` and called `android_load_sphal_library("libAncHumBokeh.so")`.
-  3. Because `libAncHumBokeh.so` and its neural model libraries are not present in ODM on custom AOSP ROMs, `nativeSetLogLevel` dereferenced a null pointer, immediately crashing with `SIGSEGV` at `pc 0x0`.
-  4. Both stock OP9 and OP9 Pro configs explicitly set `com.oplus.video.only.blur.support = 0` and `com.oplus.video.neon.support = 0`. Reverting both tags eliminates the crash completely while preserving reliable 1080p, 4K 30/60fps, and 8K video recording.
+### D2. Video Aperture (`f`) Slider & Real-Time Background Blur (`com.oplus.video.only.blur.support` & `com.oplus.video.neon.support`)
+- **Fix & Verification**:
+  1. Extracted 64-bit `libAncHumBokeh.so`, `libAncHumBokehPost.so`, `libancbase_rt_bokeh.so`, `libAncHumVideoBase.so`, and `libAncFilter.so` from ColorOS 16 payload into `.cache/aox/odm/lib64/` and registered in `aox/manifest.json`.
+  2. Discovered `sf.o` (`EffectProcessorImpl`) texture preview logic routes to `uk.f` (`VideoFusionTexturePreview`, requiring non-existent `anc/fusion_model`) when `com.oplus.video.neon.support = 1`.
+  3. Added `com.oplus.video.neon.support = 0` to `module/aox/edits.txt`. This correctly routes to `te.i` (`VideoBlurTexturePreview`), which uses `libAncHumBokeh.so` and `/odm/etc/camera/anc/merged_model`.
+  4. Tested on live device: Video mode opens smoothly with no crash; aperture `f` slider adjusts from f/1.4 to f/16 (`Strong` to `Weak`); video recording verified (`VID20261108020723.mp4`, 14.6 MB).
 
 ### D3. 60fps Video Focus Tracking (`com.oplus.video.60fps.track.focus.support` & `com.oplus.video.focus.track.30fps.only`)
 - **Fix**: Added `com.oplus.video.focus.track.30fps.only = 0` and `com.oplus.video.60fps.track.focus.support = 1` to `module/aox/edits.txt`, unlocking Qualcomm CamX double-tap subject focus tracking at 60fps.
@@ -190,6 +188,10 @@ SELinux: **Enforcing**
 
 ### E3. Group Shot Enhancement (`com.oplus.feature.groupshot.support`)
 - **Fix**: Added `com.oplus.feature.groupshot.support = 1` to `module/aox/edits.txt`, enabling multi-face facial optimization algorithms in group photos.
+
+### E4. Master Mode Unified Format Selector & Computational SuperRAW (`RAW+`)
+- **Fix**: Set `com.oplus.feature.professional.raw.support = 0` to eliminate duplicate legacy 2-item toggle, while maintaining `com.oplus.feature.professional.super.raw.support = 1` and `com.oplus.feature.raw.camera.type.support = camera_main,camera_ultra_wide,camera_tele`.
+- **Result**: Unified `Format` drawer displaying `[ JPG | RAW | RAW+ ]`. Verified 8-frame computational SuperRAW DNG generation (`IMG20261107225834.dng`, 28.1 MB).
 
 
 
