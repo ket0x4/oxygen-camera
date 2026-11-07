@@ -1,0 +1,175 @@
+# aox camera policy (varakumar01/android_hardware_oplus and vendor_oplus_camera, aox).
+# Rules naming a type this ROM lacks are ignored by KernelSU.
+
+# fc0d19d: camera scene hints. liboplus-uah-client in the camera provider
+# calls the power HAL: hal_client_domain(hal_camera_default, hal_power).
+typeattribute hal_camera_default hal_power_client
+allow hal_camera_default hal_power_service service_manager find
+allow hal_camera_default hal_power_server binder { call transfer }
+allow hal_power_server hal_camera_default binder transfer
+allow hal_camera_default hal_power_server fd use
+
+# Android 17: hal_camera_default reads system properties
+allow hal_camera_default system_prop file { read open getattr map }
+
+# 96d618c: label /proc/OIS like the other camera procfs nodes.
+genfscon proc /OIS u:object_r:vendor_proc_camera:s0
+
+# Wakelock held by the camera provider's postproc (YUV to JPEG) loop:
+# wakelock_use(hal_camera_default).
+allow hal_camera_default sysfs_wake_lock file { open read write append getattr }
+allow hal_camera_default hal_camera_default capability2 block_suspend
+allow hal_camera_default system_suspend_hwservice hwservice_manager find
+allow hal_camera_default hal_system_suspend_service service_manager find
+allow hal_camera_default system_suspend_server binder { call transfer }
+allow system_suspend_server hal_camera_default binder transfer
+allow hal_camera_default system_suspend_server fd use
+
+# The camera app itself, on a ROM without the aox camera policy. There the
+# app runs as a plain privileged app (priv_app, priv_app_36 or priv_app_37 on Android 17)
+# and the libraries it loads from /vendor and /odm keep the vendor_file
+# label. These rules are shared by every app in those domains.
+allow priv_app vendor_file file { read open getattr map execute }
+allow priv_app vendor_camera_data_file dir { create read write open getattr setattr search add_name remove_name rmdir rename ioctl lock }
+allow priv_app vendor_camera_data_file file { create read write open getattr setattr append unlink rename ioctl lock map }
+allow priv_app vendor_hal_camera_postproc_hwservice hwservice_manager find
+allow priv_app hal_camera_default binder { call transfer }
+allow priv_app hal_oplus_osense_aidl_service service_manager find
+allow priv_app qemu_hw_prop file { read open getattr map }
+allow priv_app_36 vendor_file file { read open getattr map execute }
+allow priv_app_36 vendor_camera_data_file dir { create read write open getattr setattr search add_name remove_name rmdir rename ioctl lock }
+allow priv_app_36 vendor_camera_data_file file { create read write open getattr setattr append unlink rename ioctl lock map }
+allow priv_app_36 vendor_hal_camera_postproc_hwservice hwservice_manager find
+allow priv_app_36 hal_camera_default binder { call transfer }
+allow priv_app_36 hal_oplus_osense_aidl_service service_manager find
+allow priv_app_36 qemu_hw_prop file { read open getattr map }
+allow priv_app_37 vendor_file file { read open getattr map execute }
+allow priv_app_37 vendor_camera_data_file dir { create read write open getattr setattr search add_name remove_name rmdir rename ioctl lock }
+allow priv_app_37 vendor_camera_data_file file { create read write open getattr setattr append unlink rename ioctl lock map }
+allow priv_app_37 vendor_hal_camera_postproc_hwservice hwservice_manager find
+allow priv_app_37 hal_camera_default binder { call transfer }
+allow priv_app_37 hal_oplus_osense_aidl_service service_manager find
+allow priv_app_37 qemu_hw_prop file { read open getattr map }
+
+# The rest of the aox opluscamera_app policy, for the same domains.
+# Hexagon DSP (fastrpc): SNPE, the ArcSoft bokeh and the night algorithms.
+# Without it: "open_device_node failed for domain ID 3 ... Permission denied".
+allow priv_app vendor_qdsp_device chr_file { read write open getattr ioctl map }
+allow priv_app vendor_xdsp_device chr_file { read open getattr ioctl map }
+allow priv_app adsprpcd_file dir { read open getattr search }
+allow priv_app vendor_file dir watch
+allow priv_app vendor_hal_dspmanager_hwservice hwservice_manager find
+allow priv_app vendor_dspservice binder { call transfer }
+allow vendor_dspservice priv_app binder transfer
+allow priv_app vendor_dspservice fd use
+allow priv_app vendor_hal_perf_hwservice hwservice_manager find
+allow priv_app vendor_hal_perf2_service service_manager find
+allow priv_app vendor_hal_perf_default binder { call transfer }
+allow vendor_hal_perf_default priv_app binder transfer
+allow priv_app vendor_hal_perf_default fd use
+allow priv_app vendor_hal_qspmhal_hwservice hwservice_manager find
+allow priv_app vendor_hal_qspmhal_default binder { call transfer }
+allow vendor_hal_qspmhal_default priv_app binder transfer
+allow priv_app vendor_hal_qspmhal_default fd use
+allow priv_app vendor_mpctl_prop file { read open getattr map }
+allow priv_app vendor_persist_camera_file dir { read open getattr search }
+allow priv_app vendor_persist_camera_file file { read open getattr map }
+allow priv_app_36 vendor_qdsp_device chr_file { read write open getattr ioctl map }
+allow priv_app_36 vendor_xdsp_device chr_file { read open getattr ioctl map }
+allow priv_app_36 adsprpcd_file dir { read open getattr search }
+allow priv_app_36 vendor_file dir watch
+allow priv_app_36 vendor_hal_dspmanager_hwservice hwservice_manager find
+allow priv_app_36 vendor_dspservice binder { call transfer }
+allow vendor_dspservice priv_app_36 binder transfer
+allow priv_app_36 vendor_dspservice fd use
+allow priv_app_36 vendor_hal_perf_hwservice hwservice_manager find
+allow priv_app_36 vendor_hal_perf2_service service_manager find
+allow priv_app_36 vendor_hal_perf_default binder { call transfer }
+allow vendor_hal_perf_default priv_app_36 binder transfer
+allow priv_app_36 vendor_hal_perf_default fd use
+allow priv_app_36 vendor_hal_qspmhal_hwservice hwservice_manager find
+allow priv_app_36 vendor_hal_qspmhal_default binder { call transfer }
+allow vendor_hal_qspmhal_default priv_app_36 binder transfer
+allow priv_app_36 vendor_hal_qspmhal_default fd use
+allow priv_app_36 vendor_mpctl_prop file { read open getattr map }
+allow priv_app_36 vendor_persist_camera_file dir { read open getattr search }
+allow priv_app_36 vendor_persist_camera_file file { read open getattr map }
+allow priv_app_37 vendor_qdsp_device chr_file { read write open getattr ioctl map }
+allow priv_app_37 vendor_xdsp_device chr_file { read open getattr ioctl map }
+allow priv_app_37 adsprpcd_file dir { read open getattr search }
+allow priv_app_37 vendor_file dir watch
+allow priv_app_37 vendor_hal_dspmanager_hwservice hwservice_manager find
+allow priv_app_37 vendor_dspservice binder { call transfer }
+allow vendor_dspservice priv_app_37 binder transfer
+allow priv_app_37 vendor_dspservice fd use
+allow priv_app_37 vendor_hal_perf_hwservice hwservice_manager find
+allow priv_app_37 vendor_hal_perf2_service service_manager find
+allow priv_app_37 vendor_hal_perf_default binder { call transfer }
+allow vendor_hal_perf_default priv_app_37 binder transfer
+allow priv_app_37 vendor_hal_perf_default fd use
+allow priv_app_37 vendor_hal_qspmhal_hwservice hwservice_manager find
+allow priv_app_37 vendor_hal_qspmhal_default binder { call transfer }
+allow vendor_hal_qspmhal_default priv_app_37 binder transfer
+allow priv_app_37 vendor_hal_qspmhal_default fd use
+allow priv_app_37 vendor_mpctl_prop file { read open getattr map }
+allow priv_app_37 vendor_persist_camera_file dir { read open getattr search }
+allow priv_app_37 vendor_persist_camera_file file { read open getattr map }
+
+# /data/vendor/camera_process: the APS job and Live Photo store, written by
+# the app (per-user MLS level) and the camera provider. post-fs-data.sh
+# labels the directory.
+type vendor_oplus_camera_process_file file_type
+typeattribute vendor_oplus_camera_process_file data_file_type
+typeattribute vendor_oplus_camera_process_file mlstrustedobject
+allow hal_camera_default vendor_oplus_camera_process_file dir { create read write open getattr setattr search add_name remove_name rmdir rename ioctl lock }
+allow hal_camera_default vendor_oplus_camera_process_file file { create read write open getattr setattr append unlink rename ioctl lock map }
+allow priv_app vendor_oplus_camera_process_file dir { create read write open getattr setattr search add_name remove_name rmdir rename ioctl lock }
+allow priv_app vendor_oplus_camera_process_file file { create read write open getattr setattr append unlink rename ioctl lock map }
+allow priv_app_36 vendor_oplus_camera_process_file dir { create read write open getattr setattr search add_name remove_name rmdir rename ioctl lock }
+allow priv_app_36 vendor_oplus_camera_process_file file { create read write open getattr setattr append unlink rename ioctl lock map }
+allow priv_app_37 vendor_oplus_camera_process_file dir { create read write open getattr setattr search add_name remove_name rmdir rename ioctl lock }
+allow priv_app_37 vendor_oplus_camera_process_file file { create read write open getattr setattr append unlink rename ioctl lock map }
+
+# /proc/OIS_FW_DOWNLOAD_STATE keeps the proc label: KernelSU does not load
+# the genfscon line above. This lets the camera provider read every file
+# labelled proc, which is wider than the aox label.
+allow hal_camera_default proc file { read open getattr }
+
+# The post-processing service in the camera provider hands the app a session
+# object and calls it back. Without this a 5x photo aborts the app:
+# "Attempted to retrieve value from failed HIDL call ... FAILED_TRANSACTION".
+allow hal_camera_default priv_app binder { call transfer }
+allow hal_camera_default priv_app fd use
+allow priv_app hal_camera_default fd use
+allow hal_camera_default priv_app_36 binder { call transfer }
+allow hal_camera_default priv_app_36 fd use
+allow priv_app_36 hal_camera_default fd use
+allow hal_camera_default priv_app_37 binder { call transfer }
+allow hal_camera_default priv_app_37 fd use
+allow priv_app_37 hal_camera_default fd use
+
+# libadsprpc in the app reads the DSP shell and its libraries from
+# /vendor/dsp/cdsp (adsprpcd_file on a ROM without the aox labels) and
+# watches the directory.
+allow priv_app adsprpcd_file file { read open getattr map }
+allow priv_app adsprpcd_file dir watch
+allow priv_app mnt_vendor_file dir search
+allow priv_app_36 adsprpcd_file file { read open getattr map }
+allow priv_app_36 adsprpcd_file dir watch
+allow priv_app_36 mnt_vendor_file dir search
+allow priv_app_37 adsprpcd_file file { read open getattr map }
+allow priv_app_37 adsprpcd_file dir watch
+allow priv_app_37 mnt_vendor_file dir search
+
+# Camera checks SELinux enforcing state via /sys/fs/selinux/enforce
+allow priv_app selinuxfs file { read open getattr }
+allow priv_app_36 selinuxfs file { read open getattr }
+allow priv_app_37 selinuxfs file { read open getattr }
+
+# Camera provider reads default system properties on newer Android releases
+allow hal_camera_default default_prop file { read open getattr map }
+
+# Camera HAL provider reads overlaid camera tuning files and searches data
+allow hal_camera_default system_file file { read open getattr map }
+allow hal_camera_default system_file dir { read open getattr search }
+allow hal_camera_default system_data_file dir search

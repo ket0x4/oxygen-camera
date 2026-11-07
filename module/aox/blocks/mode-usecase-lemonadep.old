@@ -1,0 +1,16 @@
+[OemCamGetModeUsecase]
+    #operation mode     operation_mode     LogicalCameraId     StreamNum
+    Mode[0]          =     0x8028;              0x0002;            3       #SuperStable Usecase
+    Mode[1]          =     0x83AE;              0x0000;            3       #8k30fps video 0
+    Mode[2]          =     0x80AD;              0x0000;            2       #SuperStable Usecase for videoUltraNightMode 0
+    Mode[3]          =     0x80AD;              0x0002;            2       #SuperStable Usecase for videoUltraNightMode 2
+    Mode[4]          =     0x83AE;              0x0002;            3       #8k30fps video 2
+    Mode[5]          =     0x830B;              0x0000;            2       #Video portrait
+
+    #usecase list
+    Usecase[0]       =     UsecaseVideoEIS2PreviewEIS2SnapshotYUV
+    Usecase[1]       =     UsecaseVideo8KEIS2PreviewEIS2SnapshotYUV
+    Usecase[2]       =     UsecaseOPlusVideoEIS2PreviewEIS2
+    Usecase[3]       =     UsecaseOPlusVideoEIS2PreviewEIS2
+    Usecase[4]       =     UsecaseVideo8KEIS2PreviewEIS2SnapshotYUV
+    Usecase[5]       =     UsecaseOPlusVideoEIS3PreviewEIS2

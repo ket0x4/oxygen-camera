@@ -1,0 +1,131 @@
+name: Build module
+
+# Every push to main (OplusCamera 7.x) or cam4 (OplusCamera 4.x), and manual
+# runs, builds a KernelSU Next module ZIP from the pinned aox trees, uploads it
+# as a workflow artifact and publishes it as a GitHub release. The main
+# release is always the one marked latest. Each camera keeps one
+# release: publishing a build removes that camera's earlier ones and their
+# tags. Pull requests only build and test.
+#
+# The camera APK is signed with the public AOSP platform test key.
+
+on:
+  push:
+    branches: [main, cam4]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write  # publish releases
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          # The runner image has clang/lld/llvm 18, busybox and the Android
+          # SDK's apksigner; only the libc++ headers are missing. The package
+          # index is refreshed only if the image's copy is too old.
+          echo "/usr/lib/llvm-18/bin" >> "$GITHUB_PATH"
+          ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1 >> "$GITHUB_PATH"
+          install="sudo apt-get install -y -q --no-install-recommends libc++-18-dev libc++abi-18-dev"
+          $install || { sudo apt-get update -q && $install; }
+          python3 -m pip install --quiet pytest
+
+      - name: Cache pinned sources
+        uses: actions/cache@v4
+        with:
+          path: .cache/aox
+          key: sources-${{ hashFiles('aox/manifest.json', 'scripts/prepare_aox.py') }}
+
+      - name: Fetch the pinned aox files and test fixtures
+        run: python3 -I scripts/prepare_aox.py --fixtures
+
+      - name: Build liboplus-uah-client
+        run: |
+          export PATH="/usr/lib/llvm-18/bin:$PATH"
+          sh native/uah-client/build.sh .cache/aox/liboplus-uah-client.so
+
+      - name: Shell checks
+        run: |
+          python3 -m pip install --quiet shellcheck-py
+          for script in module/*.sh native/uah-client/build.sh; do busybox sh -n "$script"; done
+          shellcheck -s sh -x module/aox.sh module/customize.sh module/post-fs-data.sh \
+            module/mount-camera.sh module/boot-completed.sh module/action.sh native/uah-client/build.sh
+
+      - name: Tests
+        run: |
+          export PATH="/usr/lib/llvm-18/bin:$PATH"
+          python3 -m pytest -q tests
+
+      - name: Build the app profile helper
+        run: python3 scripts/prepare_visibility.py --output-dir build/visibility
+
+      - name: Build module
+        run: |
+          cd scripts
+          python3 build.py --uah-client ../.cache/aox/liboplus-uah-client.so \
+            --visibility-cache ../build/visibility
+          cd ..
+          version=$(sed -n 's/^version=//p' module/module.prop)
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "ZIP=OplusCamera-OP9-$version-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+          cat build/OplusCamera-OP9-*.zip.sha256
+
+      - name: Upload module
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ZIP }}
+          path: |
+            build/OplusCamera-OP9-*.zip
+            build/OplusCamera-OP9-*.zip.sha256
+            !build/OplusCamera-OP9.zip
+            !build/OplusCamera-OP9.zip.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish release
+        if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/cam4')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="v$VERSION-build$GITHUB_RUN_NUMBER"
+          app=$(python3 -c "import json; print(json.load(open('aox/manifest.json'))['app_version'])")
+          latest=false
+          [ "$GITHUB_REF" = refs/heads/main ] && latest=true
+          # This camera's earlier releases.
+          tags=$(gh release list --limit 100 --json tagName --jq '.[].tagName' | grep -E '^v.*-build[0-9]+$' || true)
+          if [ "$latest" = true ]; then
+            old=$(echo "$tags" | grep -v -- '-cam4-' || true)
+          else
+            old=$(echo "$tags" | grep -- '-cam4-' || true)
+          fi
+          {
+            echo "OplusCamera $app for the OnePlus 9 / 9 Pro on crDroid, module $VERSION,"
+            echo "built from \`${GITHUB_SHA::7}\` ($(git log -1 --format=%s))."
+            echo
+            echo "Install \`OplusCamera-OP9-$VERSION.zip\` in KernelSU Next and reboot. The"
+            echo "module turns Umount modules off for the camera by itself; if the installer"
+            echo "says it cannot, set App Profile → Oplus Camera → Umount modules OFF."
+            echo "What works is listed in the README. What the installer decided is in"
+            echo "/data/adb/modules/ooscamera_op9/aox.log."
+            echo
+            echo "SHA-256: \`$(cut -d ' ' -f 1 build/OplusCamera-OP9-$VERSION.zip.sha256)\`"
+          } > release-notes.md
+          gh release create "$tag" \
+            "build/OplusCamera-OP9-$VERSION.zip" "build/OplusCamera-OP9-$VERSION.zip.sha256" \
+            --target "$GITHUB_SHA" --title "Oplus Camera $app (module $VERSION, build $GITHUB_RUN_NUMBER)" \
+            --notes-file release-notes.md --latest=$latest
+          for tag in $old; do
+            gh release delete "$tag" --cleanup-tag --yes
+          done
+          # A Camera 4 build must never take over "latest".
+          newest=$(gh release list --limit 100 --json tagName --jq '.[].tagName' | grep -E '^v.*-build[0-9]+$' | grep -v -- '-cam4-' | head -n 1 || true)
+          [ -z "$newest" ] || gh release edit "$newest" --latest

@@ -1,0 +1,47 @@
+        {
+            "mode": "dolbyVideo",
+            "entity": [
+                {
+                    "id": 0,
+                    "camera_num": 1,
+                    "separate_preview_video": 1,
+                    "pipelines": {
+                        "preview": {
+                            "enable": 1,
+                            "master_input_width": 1920,
+                            "master_input_height": 1080,
+                            "slave_input_width": 0,
+                            "slave_input_height": 0,
+                            "third_input_width": 0,
+                            "third_input_height": 0,
+                            "output_width": 1920,
+                            "output_height": 1080,
+                            "skip_frame_cnt": 0,
+                            "pipeline_copy_from": "",
+                            "algonode_copy_from": "",
+                            "algo_list": [ "preview_lsd" ]
+                        },
+                        "video": {
+                            "enable": 1,
+                            "master_input_width": 3840,
+                            "master_input_height": 2160,
+                            "slave_input_width": 0,
+                            "slave_input_height": 0,
+                            "third_input_width": 0,
+                            "third_input_height": 0,
+                            "output_width": 3840,
+                            "output_height": 2160,
+                            "skip_frame_cnt": 0,
+                            "pipeline_copy_from": "",
+                            "algonode_copy_from": "",
+                            "algo_list": [ "video_watermark_process_on_output" ]
+                        },
+                        "asd": {
+                            "enable": 0
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "mode": "ultraNight",
