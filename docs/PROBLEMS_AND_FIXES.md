@@ -703,11 +703,14 @@ In Hasselblad XPan mode, the UI was locked to the 45mm main lens. The 30mm Ultra
 - **Finding**: Standard **TIME-LAPSE** (`fastVideo`) uses `commonVideoSatHal` (`operation_mode = 33548`) and already provides full multi-camera SAT zoom (`0.6x`, `1x`, `2x`, `5x`) via `com.oplus.feature.fast.video.sat.support = 1`.
 - **Limitation on Android 17**: Tapping the optional Hyperlapse toggle (`pref_video_hyper_lapse_key`) switches the camera mode to `hyperlapseProVideo` (`0x80a5`). On Android 17 / SDK 37, this triggers a crash in `android.hardware.camera2.marshal.impl.MarshalQueryableSize$MarshalerSize.marshal` because `APSSuperEISNode` passes null `android.util.Size` metadata into the Camera2 capture request, corrupting GL texture deallocation. Stock OnePlus 9 only shipped with a single-point zoom table (`com.oplus.feature.hyper.lapse.zoom.list = 0.6`). Standard Time-Lapse SAT zoom across all lenses is operational without the crash.
 
-### 18.5 B1: Master Mode — "RAW Plus" / Multi-Frame SuperRAW (`com.oplus.feature.professional.super.raw.support`)
-- **Symptom**: In Master Mode (`MORE` -> `MASTER`), the top format selector only displayed `JPG` and standard single-exposure `RAW`. The computational multi-frame stacked RAW mode (`RAW Plus` / `RAW+`) was missing.
-- **Root Cause**: Stock `oplus_camera_config` disabled `com.oplus.feature.professional.super.raw.support` (`"0"`). In `OplusCamera 7.013.11`, `em/u1.java` and `em/v.java` gate `pref_super_raw_control_key` behind this boolean configuration tag.
-- **Fix**: Set `com.oplus.feature.professional.super.raw.support` to `1` in `odm/etc/camera/config/oplus_camera_config` via `module/aox/edits.txt`.
-- **Result**: `FormatRAW+` is displayed and selectable in the Master Mode format drawer. When captured, the APS pipeline executes `RealTimeFeatureZSLPreviewRaw_0` with `mSuperRawEnable: 1`, `previewdecision_bracket_mode: 14`, and `previewdecision_mfsr_frame_count: 8` (8-frame MFSR fusion), producing a high-dynamic-range `27.7 MB` multi-frame DNG with Hasselblad color profile metadata (`OP HB Color Profile 1`).
+### 18.5 B1: Master Mode — RAW Format Selector & Double Menu Resolution
+- **Symptom**: If `com.oplus.feature.professional.super.raw.support` was enabled alongside stock `com.oplus.feature.professional.raw.support`, Master Mode displayed two conflicting format menus simultaneously: one menu showing `[JPG, RAW]` and a second drawer showing `[JPG, RAW, RAW+]`.
+- **Root Cause**:
+  1. In `OplusCamera 7.013.11`, `em/u1.java` (lines 665, 685) and `em/v.java` (lines 973, 993) independently register `pref_super_raw_control_key` (gated by `com.oplus.feature.professional.super.raw.support`) and `pref_raw_control_key` (gated by `com.oplus.feature.professional.raw.support`).
+  2. Stock OnePlus 9/9 Pro `oplus_camera_config` sets `com.oplus.feature.professional.raw.support = 1` and `com.oplus.feature.professional.super.raw.support = 0`.
+  3. When both were set to `1`, the UI registered two concurrent format observers, cluttering Master mode with duplicate RAW options. Furthermore, `em/u1.java` gates `pref_super_raw_control_key` capture behind `CameraConfig.z(..., "com.oplus.feature.raw.camera.type.support")`, which is not populated on SM8350.
+- **Fix**: Revert `com.oplus.feature.professional.super.raw.support` to stock `0` in `module/aox/edits.txt`.
+- **Result**: Exactly one unified, clean format selector (`JPG` / `RAW`) is displayed in Master Mode, capturing native 12-bit uncompressed RAW DNGs with Hasselblad color calibration across Main and Ultra-Wide lenses without duplicate UI elements.
 
 ### 18.6 B2: Night Mode 2x In-Sensor Zoom (`IZOOM`) Button (`com.oplus.night_insensor_zoom.point.2x.support` & `com.oplus.night.zoom.max.value.default`)
 - **Symptom**: In Night Mode (`NIGHT`), the viewfinder only offered `1x` zoom; the dedicated `2x` in-sensor zoom button (and multi-lens zoom) was absent.
@@ -753,16 +756,22 @@ In Hasselblad XPan mode, the UI was locked to the 45mm main lens. The 30mm Ultra
   - `com.oplus.feature.ai.enhancement.video.support` and `com.oplus.feature.ultra.night.video.support` must remain `"0"` on this device to prevent exposure of the crashing night video toggle.
   - Native Live HDR Video is independently supported via `com.oplus.feature.video.live.hdr.support = 1`.
 
-### 18.11 D2: Video Portrait Bokeh & Neon Bokeh Flare (`com.oplus.video.only.blur.support` & `com.oplus.video.neon.support`)
-- **Symptom**: Real-time adjustable background blur (bokeh) in standard Video mode was hidden.
+### 18.11 D2: Video Aperture (`f`) Slider Crash (`SIGSEGV` in `libAncHumBokeh-jni.so`)
+- **Symptom**: Swiping to Video mode or touching the aperture (`f`) slider crashed the app with a native `SIGSEGV` at `pc 0000000000000000` in `PreviewGLThread`:
+  ```text
+  #00 pc 0000000000000000  <unknown>
+  #01 pc 0000000000006930  /system_ext/lib64/libAncHumBokeh-jni.so (Java_com_anc_humansdk_HumanEffectBokehApi_nativeSetLogLevel+32)
+  #04 com.anc.humansdk.HumanEffectBokehApi.setLogLevel+36
+  #06 com.oplus.ocs.camera.HumanEffectBokehApiProxy.<init>+110
+  ```
 - **Root Cause & Technical Verification**:
-  1. In `CameraHWConfiguration.config`, Qualcomm CamX mode 26 (`Mode[26] = 0x800B; 0x0001; 0x0008; 0 #Video Portrait`) and usecase mode 5 (`Mode[5] = 0x830B; 0x0000; 2 #Video portrait`) are fully configured in the hardware camera layer.
-  2. Both necessary 64-bit video blur algorithm libraries (`/odm/lib64/libarcsoft_scbokeh_video.so` and `/odm/lib64/libstblur_api.so`) are pre-installed in `/odm/lib64`.
-  3. The features were gated solely in software by `com.oplus.video.only.blur.support` and `com.oplus.video.neon.support` set to `"0"` in `oplus_camera_config`.
-- **Fix**:
-  1. Add `tag|odm/etc/camera/config/oplus_camera_config|com.oplus.video.only.blur.support|Byte|1|*|1` to `module/aox/edits.txt`.
-  2. Add `tag|odm/etc/camera/config/oplus_camera_config|com.oplus.video.neon.support|Byte|1|*|1` to `module/aox/edits.txt`.
-- **Result**: `pref_video_blur_menu` is active in `com.oplus.camera`, allowing real-time depth blur aperture adjustments during video recording.
+  1. Setting `com.oplus.video.only.blur.support` to `1` enabled `pref_video_blur_menu` in `OplusCamera 7.013.11`, exposing the `f` aperture slider in Video mode.
+  2. Touching the slider instantiates `HumanEffectBokehApiProxy`, which loads `libAncHumBokeh-jni.so`.
+  3. `libAncHumBokeh-jni.so` attempts `android_load_sphal_library("libAncHumBokeh.so")`.
+  4. Neither `libAncHumBokeh.so` nor its companion runtime model libraries (`libancbase_rt_bokeh.so`, ~13MB) are present in the custom ROM `/odm/lib64` partition. The dlopen fails, but the JNI wrapper lacks null-checks and dereferences a null function pointer in `nativeSetLogLevel`.
+  5. Stock OnePlus 9 (`lemonade`) and 9 Pro (`lemonadep`) explicitly set `com.oplus.video.only.blur.support = 0` and `com.oplus.video.neon.support = 0` in `oplus_camera_config`.
+- **Fix**: Revert `com.oplus.video.only.blur.support` and `com.oplus.video.neon.support` to stock `0` by removing them from `module/aox/edits.txt`.
+- **Result**: The crashing `f` slider is removed from Video mode; Video recording is completely stable across 1080p, 4K 30/60fps, and 8K with Super EIS and full multi-lens zoom.
 
 
 

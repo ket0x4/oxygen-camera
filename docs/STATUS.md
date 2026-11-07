@@ -23,9 +23,9 @@ SELinux: **Enforcing**
   - *Status*: **VERIFIED & OPERATIONAL** (Standard `TIME-LAPSE` (`fastVideo`) uses `commonVideoSatHal` with full SAT multi-camera zoom (`0.6x`, `1x`, `2x`, `5x`). The Hyperlapse EIS toggle limitation under Android 17 Camera2 marshaling is fully documented).
 
 ### Category B: Main Sensor (`Sony IMX689` / `IMX789`) & Master / RAW Capabilities
-- [x] **B1. Master Mode — "RAW Plus" (Multi-Frame SuperRAW)** (`com.oplus.feature.professional.super.raw.support = 1`)
-  - *Goal*: Enable computational multi-frame stacked RAW DNG (`RAW MAX` / `SuperRAW`) alongside standard single-frame `RAW` in Master Mode.
-  - *Status*: **VERIFIED & ENABLED** (`FormatRAW+` button active in Master Mode top menu; triggers APS multi-frame super raw bracketing (`mfsr_frame_count: 8`, `RealTimeFeatureZSLPreviewRaw_0`, `mSuperRawEnable: 1`); generates 27.7MB multi-frame stacked DNG with Hasselblad color profile).
+- [x] **B1. Master Mode — Hasselblad RAW Mode** (`com.oplus.feature.professional.raw.support = 1`)
+  - *Goal*: Provide native single-exposure 12-bit uncompressed RAW DNG capture with Hasselblad color profile in Master Mode without duplicate UI format menus.
+  - *Status*: **VERIFIED & OPERATIONAL** (`FormatRAW` toggle in Master Mode captures native 12-bit DNG files with Hasselblad color calibration metadata. `com.oplus.feature.professional.super.raw.support` is disabled to prevent duplicate concurrent RAW format drawers).
 - [x] **B2. Night Mode 2x In-Sensor Zoom (`IZOOM`) Button** (`com.oplus.night_insensor_zoom.point.2x.support = 1` & `com.oplus.night.zoom.max.value.default = 10.0`)
   - *Goal*: Enable the dedicated `2x` zoom point in Night Mode utilizing the 48MP IMX689 in-sensor crop (`Mode[41]`).
   - *Status*: **VERIFIED & ENABLED** (`0.6x`, `1x`, and `2x` zoom buttons displayed in Night Mode; tapping `2x` activates `OPMetaManager: enableInSensorZoom: 1` and `ControlZoomRatio: 5.000000`; captured 12MP 4000x3000 Night photo with ArcSoft SuperNight 8-frame HDR fusion).
@@ -45,9 +45,9 @@ SELinux: **Enforcing**
 - [x] **D1. AI Highlight Video** (`com.oplus.feature.ai.enhancement.video.support`)
   - *Goal*: Enable automatic scene-adaptive switching between Live HDR Video (`0x840B`) and Ultra Night Video (`0x80AD`).
   - *Status*: **PLATFORM VENDOR BLOB LIMITATION** (Enabling AI enhancement video exposes the `key_ultra_night_video` toggle. Toggling Night Video invokes `APSNightVisionNode::doInit` in `/odm/lib64/libAlgoInterface.so`, which attempts to `dlopen("/odm/lib64/libnightvision.so")`. On OnePlus 9 / SM8350, OnePlus only shipped the 32-bit `/odm/lib/libnightvision.so` and no 64-bit build exists in stock firmware. As a 64-bit process, `com.oplus.camera` aborts with SIGSEGV/SIGBUS upon calling null function pointer. Must remain `0` to avoid crash trap. Full architectural breakdown in PROBLEMS_AND_FIXES.md).
-- [x] **D2. Video Portrait Bokeh & Bokeh Flare** (`com.oplus.video.only.blur.support = 1`, `com.oplus.video.neon.support = 1`)
-  - *Goal*: Enable real-time video background blur (`Mode[26]` / `0x830B`) and neon bokeh flare filter in Video mode.
-  - *Status*: **VERIFIED & ENABLED** (`Mode[26] = 0x800B; 0x0001; 0x0008; 0` and usecase `Mode[5] = 0x830B` active in CamX; 64-bit ArcSoft and SenseTime blur libraries `/odm/lib64/libarcsoft_scbokeh_video.so` and `/odm/lib64/libstblur_api.so` confirmed present; `pref_video_blur_menu` active in UI with aperture control).
+- [x] **D2. Video Portrait Aperture Blur & Crash Resolution** (`com.oplus.video.only.blur.support = 0`, `com.oplus.video.neon.support = 0`)
+  - *Goal*: Eliminate `SIGSEGV` crash in `libAncHumBokeh-jni.so` caused by missing Anchor Human Bokeh models when entering Video mode or touching the aperture (`f`) slider.
+  - *Status*: **RESOLVED** (`com.oplus.video.only.blur.support` and `com.oplus.video.neon.support` are reverted to stock `0`. Removes the crashing `f` slider and prevents `PreviewGLThread` native crashes).
 - [x] **D3. 60fps Video Subject Focus Tracking** (`com.oplus.video.60fps.track.focus.support = 1`, `com.oplus.video.focus.track.30fps.only = 0`)
   - *Goal*: Unlock double-tap subject focus tracking at 60fps (previously restricted to 30fps only).
   - *Status*: **VERIFIED & ENABLED** (`com.oplus.video.focus.track.30fps.only = 0` and `com.oplus.video.60fps.track.focus.support = 1` added to `edits.txt`; unlocks 60fps Qualcomm CamX subject tracking).
@@ -102,21 +102,11 @@ SELinux: **Enforcing**
   3. Stock OnePlus 9 hardware only shipped with a single-point zoom table (`com.oplus.feature.hyper.lapse.zoom.list = 0.6`) without multi-lens calibration tables for Hyperlapse mode.
 - **Resolution**: TIME-LAPSE mode already provides full SAT multi-camera zoom across `0.6x`, `1x`, `2x`, and `5x` lenses. The Hyperlapse toggle limitation on Android 17 is documented and standard Time-Lapse SAT zoom is verified operational.
 
-### B1. Master Mode — "RAW Plus" / Multi-Frame SuperRAW (`com.oplus.feature.professional.super.raw.support`)
-- **Root Cause**:
-  1. `oplus_camera_config` set `com.oplus.feature.professional.super.raw.support = "0"`.
-  2. In `OplusCamera 7.013.11`, `em/u1.java` and `em/v.java` check `getSupportFunction("pref_super_raw_control_key")`. When the tag is disabled (`0`), the top format drawer only offers `JPG` and standard single-exposure `RAW`.
-- **Fix**:
-  1. Added `tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.professional.super.raw.support|Byte|1|*|1` to `module/aox/edits.txt`.
-- **Verification**:
-  1. Opened `MORE` -> `MASTER` mode on OnePlus 9 (`LE2115`).
-  2. Tapped the format selector button (`Formatjpg`) — verified three selectable options appear: `FormatJPG`, `FormatRAW`, and newly unlocked `FormatRAW+`.
-  3. Selected `FormatRAW+`. Verified the top bar reflects `FormatRAW+`.
-  4. Captured a test photo with the shutter button.
-  5. Inspected `logcat`: confirmed APS triggers multi-frame super raw bracketing:
-     `mSuperRawEnable: 1`, `previewdecision_bracket_mode, 14, previewdecision_mfsr_frame_count, 8`, executing usecase `RealTimeFeatureZSLPreviewRaw_0`.
-  6. Verified output file in `/sdcard/DCIM/Camera/`: generated `IMG20261107203745 (1).dng` (`27.68 MB` vs 24 MB for standard single RAW).
-  7. Inspected DNG metadata: TIFF header contains `OP HB Color Profile 1` (OnePlus Hasselblad Color Profile 1) on model `LE2115`.
+### B1. Master Mode — Hasselblad RAW Mode & Mutual Exclusion
+- **Root Cause & Resolution**:
+  1. Setting `com.oplus.feature.professional.super.raw.support = 1` while stock `com.oplus.feature.professional.raw.support = 1` remained active caused OplusCamera to register two simultaneous format observers (`pref_raw_control_key` and `pref_super_raw_control_key`), showing two format menus (one with `[JPG, RAW]` and one with `[JPG, RAW, RAW+]`).
+  2. In addition, `pref_super_raw_control_key` in `em/u1.java` checks `CameraConfig.z(str3, "com.oplus.feature.raw.camera.type.support")`, which is not defined in the SM8350 platform configuration.
+  3. Reverting `com.oplus.feature.professional.super.raw.support` to stock `0` ensures a single, clean format selector (`JPG` / `RAW`) in Master Mode that captures native 12-bit uncompressed DNG files with Hasselblad color profile without UI duplicates.
 
 ### B2. Night Mode 2x In-Sensor Zoom (`IZOOM`) Button (`com.oplus.night_insensor_zoom.point.2x.support` & `com.oplus.night.zoom.max.value.default`)
 - **Root Cause**:
@@ -178,8 +168,12 @@ SELinux: **Enforcing**
   4. Because `com.oplus.camera` runs as a 64-bit binary, `dlopen` fails, triggering an unmapped instruction abort (`SIGSEGV` / `SIGBUS`).
 - **Resolution**: Kept `com.oplus.feature.ai.enhancement.video.support = 0` to prevent user crash trap; documented vendor library root cause. Live HDR video is independently operational.
 
-### D2. Video Portrait Bokeh & Neon Bokeh Flare (`com.oplus.video.only.blur.support` & `com.oplus.video.neon.support`)
-- **Fix**: Added `com.oplus.video.only.blur.support = 1` and `com.oplus.video.neon.support = 1` to `module/aox/edits.txt`. CamX mode 26 (`0x800B` flag `0x0008`) and usecase mode 5 (`0x830B`) are verified configured; 64-bit ArcSoft and SenseTime blur libraries `/odm/lib64/libarcsoft_scbokeh_video.so` and `/odm/lib64/libstblur_api.so` are verified present on device.
+### D2. Video Portrait Aperture Blur & Crash Resolution (`com.oplus.video.only.blur.support` & `com.oplus.video.neon.support`)
+- **Root Cause & Resolution**:
+  1. Enabling `com.oplus.video.only.blur.support = 1` exposed the `f` aperture slider in Video mode.
+  2. Touching the slider invoked `HumanEffectBokehApiProxy`, which dynamically loaded `libAncHumBokeh-jni.so` and called `android_load_sphal_library("libAncHumBokeh.so")`.
+  3. Because `libAncHumBokeh.so` and its neural model libraries are not present in ODM on custom AOSP ROMs, `nativeSetLogLevel` dereferenced a null pointer, immediately crashing with `SIGSEGV` at `pc 0x0`.
+  4. Both stock OP9 and OP9 Pro configs explicitly set `com.oplus.video.only.blur.support = 0` and `com.oplus.video.neon.support = 0`. Reverting both tags eliminates the crash completely while preserving reliable 1080p, 4K 30/60fps, and 8K video recording.
 
 ### D3. 60fps Video Focus Tracking (`com.oplus.video.60fps.track.focus.support` & `com.oplus.video.focus.track.30fps.only`)
 - **Fix**: Added `com.oplus.video.focus.track.30fps.only = 0` and `com.oplus.video.60fps.track.focus.support = 1` to `module/aox/edits.txt`, unlocking Qualcomm CamX double-tap subject focus tracking at 60fps.

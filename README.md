@@ -17,10 +17,9 @@ Verified on OnePlus 9 (`LE2111` / `LE2115`), **SELinux Enforcing**, crDroid 16 /
 | **10-bit Color (HEIC)** | Working | 10-bit `yuv420p10le` hardware HEIC encoding |
 | **Portrait** (Rear 1x & 2x, Front) | Working | SAT Camera ID `12` dual-camera depth + OEM FaceBeauty |
 | **Night Mode** (0.6x Ultra-Wide, 1x Main, 2x IZOOM) | Working | SuperNight v3 (`0x8019`), 48MP in-sensor zoom (`IZOOM`), calibrated 10-bit black level (`64`) |
-| **Master / Pro Mode** (JPEG, RAW & SuperRAW) | Working | 16-bit DNG RAW and computational 8-frame multi-frame stacked SuperRAW (`FormatRAW+`) with Hasselblad color profile; 1-swipe access on bottom carousel |
+| **Master / Pro Mode** (JPEG & 12-bit RAW) | Working | Native 12-bit DNG RAW capture with Hasselblad color calibration profile; 1-swipe access on bottom carousel |
 | **Video** (720p / 1080p / 4K @ 30/60fps) | Working | EIS, Live HDR, Dolby Vision HLG, 10-bit video, 60fps focus tracking, 4K30 LUT & director filters |
 | **Ultra-Wide 4K @ 60fps Video** | Working | Unlocked full 4K 60fps on Sony IMX766 Ultra-Wide with seamless multi-camera zoom |
-| **Video Portrait Bokeh & Neon Flare** | Working | Real-time background blur aperture slider and neon flare filter during video recording |
 | **Ultra Steady Pro (Super EIS)** | Working | Wide-angle Super EIS stabilization on the IMX766 at up to 4K 30fps (`operation_mode = 0x8028`) |
 | **Video 8K** (24 / 30 fps) | Working | 2-stream 8K pipeline |
 | **Film (Movie) & Log Video** | Working | Full manual controls, histogram, and Log recording |
