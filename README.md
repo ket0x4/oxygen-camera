@@ -12,18 +12,23 @@ Verified on OnePlus 9 (`LE2111` / `LE2115`), **SELinux Enforcing**, crDroid 16 /
 
 | Mode / Feature | Status | Notes |
 |---|---|---|
-| **Photo** (0.6x Ultra-Wide, 1x Main, 2x, 5x) | Working | Full HDR, AI scene, filters, Hasselblad watermark |
+| **Photo** (0.6x Ultra-Wide, 1x Main, 2x, 5x) | Working | Full HDR, AI scene, filters, Hasselblad watermark, DCI-P3 wide color gamut |
 | **Hi-Res 48MP / 50MP** | Working | Full-resolution Bayer remosaic (`IMX689` / `IMX766` / `IMX789`) |
 | **10-bit Color (HEIC)** | Working | 10-bit `yuv420p10le` hardware HEIC encoding |
 | **Portrait** (Rear 1x & 2x, Front) | Working | SAT Camera ID `12` dual-camera depth + OEM FaceBeauty |
-| **Night Mode** (Rear, Ultra-Wide, Front) | Working | SuperNight v3 (`0x8019`) with calibrated 10-bit black level (`64`) & unit AWB gain |
-| **Master / Pro Mode (JPEG & RAW)** | Working | 16-bit Adobe DNG RAW (`SENSOR_OPAQUE_RAW`) with normalized `BlackLevel` (`64`) & `BaselineExposure` |
-| **Video** (720p / 1080p / 4K @ 30/60fps) | Working | EIS, Live HDR, Dolby Vision HLG, 10-bit video, focus tracking |
+| **Night Mode** (0.6x Ultra-Wide, 1x Main, 2x IZOOM) | Working | SuperNight v3 (`0x8019`), 48MP in-sensor zoom (`IZOOM`), calibrated 10-bit black level (`64`) |
+| **Master / Pro Mode** (JPEG, RAW & SuperRAW) | Working | 16-bit DNG RAW and computational 8-frame multi-frame stacked SuperRAW (`FormatRAW+`) with Hasselblad color profile; 1-swipe access on bottom carousel |
+| **Video** (720p / 1080p / 4K @ 30/60fps) | Working | EIS, Live HDR, Dolby Vision HLG, 10-bit video, 60fps focus tracking, 4K30 LUT & director filters |
+| **Ultra-Wide 4K @ 60fps Video** | Working | Unlocked full 4K 60fps on Sony IMX766 Ultra-Wide with seamless multi-camera zoom |
+| **Video Portrait Bokeh & Neon Flare** | Working | Real-time background blur aperture slider and neon flare filter during video recording |
+| **Ultra Steady Pro (Super EIS)** | Working | Wide-angle Super EIS stabilization on the IMX766 at up to 4K 30fps (`operation_mode = 0x8028`) |
 | **Video 8K** (24 / 30 fps) | Working | 2-stream 8K pipeline |
 | **Film (Movie) & Log Video** | Working | Full manual controls, histogram, and Log recording |
 | **Slo-mo** (1080p@240fps / 720p@480fps) | Working | HFR 8x (240fps) and 16x (480fps) slow-motion |
 | **XPan** (30mm Ultra-Wide & 45mm Main) | Working | Hasselblad 65:24 panoramic mode on both `30mm` (`IMX766`) and `45mm` (`IMX689`) lenses |
-| **Long Exposure, Time-Lapse, Dual-View, Tilt-Shift, Pano** | Working | Full hardware HAL pipeline support |
+| **Long Exposure** (0.6x Ultra-Wide & 1x Main) | Working | Multi-second light trails and moving crowds on both Ultra-Wide and Main lenses |
+| **Panorama** (Rear & Front Selfie) | Working | Wide stitched panoramas on rear multi-camera and front IMX471 with live stitching guidance |
+| **Time-Lapse & Dual-View** | Working | Full multi-lens SAT zoom (`0.6x`, `1x`, `2x`, `5x`) and multi-stream recording |
 
 ---
 
@@ -88,7 +93,8 @@ python3 scripts/audit_artifact.py build/OplusCamera-OP9.zip
 
 ## Documentation
 
-- **[docs/PROBLEMS_AND_FIXES.md](docs/PROBLEMS_AND_FIXES.md)** — Complete engineering write-up of all 17 root causes, ARM64 binary patches, Smali bytecode patches, SELinux rules, EROFS compression, and ART/HAL performance optimizations.
+- **[docs/STATUS.md](docs/STATUS.md)** — Comprehensive lens and sensor feature enhancement tracker with live hardware verification records and CamX usecase details.
+- **[docs/PROBLEMS_AND_FIXES.md](docs/PROBLEMS_AND_FIXES.md)** — Complete engineering write-up of all 18 root causes, ARM64 binary patches, Smali bytecode patches, SELinux rules, EROFS compression, and ART/HAL performance optimizations.
 - **[aox/README.md](aox/README.md)** — Overview of the `aox` architecture, install-time config engine (`module/aox/edits.txt`), and device compatibility rules.
 
 ---
