@@ -1,5 +1,10 @@
 # Oplus Camera for OnePlus 9 / 9 Pro
 
+[![Release](https://img.shields.io/github/v/release/ket0x4/oxygen-camera?color=blue&label=Latest%20Release)](https://github.com/ket0x4/oxygen-camera/releases/latest)
+[![SELinux](https://img.shields.io/badge/SELinux-Enforcing-success)](https://github.com/ket0x4/oxygen-camera)
+[![Android](https://img.shields.io/badge/Android-16%20%7C%2017-brightgreen)](https://github.com/ket0x4/oxygen-camera)
+[![License](https://img.shields.io/badge/License-GPL%20v3-orange)](LICENSE)
+
 A standalone **KernelSU Next** (and APatch / Magisk) module that ports **OplusCamera 7.013.11** (ColorOS 16 / OxygenOS 16) to the OnePlus 9 (`lemonade`) and OnePlus 9 Pro (`lemonadep`) running any **Android 16 or 17** custom ROM with **SELinux Enforcing**.
 
 No third-party metamodules (Mountify, OverlayFS managers, etc.) are required—the module builds its own compressed read-only **EROFS** (or `ext4`) image at install time, mounts it via OverlayFS before Android scans packages, and automatically configures KernelSU App Profile visibility.
@@ -19,6 +24,7 @@ Verified on OnePlus 9 (`LE2111` / `LE2115`), **SELinux Enforcing**, crDroid 16 /
 | **Night Mode** (0.6x Ultra-Wide, 1x Main, 2x IZOOM) | Working | SuperNight v3 (`0x8019`), 48MP in-sensor zoom (`IZOOM`), calibrated 10-bit black level (`64`) |
 | **Master / Pro Mode** (JPEG, RAW & RAW+) | Working | Native 12-bit DNG RAW and computational 8-frame stacked SuperRAW (`RAW+`) with Hasselblad color calibration profile; unified clean format selector; 1-swipe access on bottom carousel |
 | **Video** (720p / 1080p / 4K @ 30/60fps) | Working | Real-time aperture blur (`f/1.4` - `f/16`), EIS, Live HDR, Dolby Vision HLG, 10-bit video, 60fps focus tracking, 4K30 LUT & director filters |
+| **AI Highlight & Ultra Night Video** | Working | 64-bit ColorOS 16 AI night vision pipeline (`libnightvision.so` + `libfastov_dsp.so`) |
 | **Ultra-Wide 4K @ 60fps Video** | Working | Unlocked full 4K 60fps on Sony IMX766 Ultra-Wide with seamless multi-camera zoom |
 | **Ultra Steady Pro (Super EIS)** | Working | Wide-angle Super EIS stabilization on the IMX766 at up to 4K 30fps (`operation_mode = 0x8028`) |
 | **Video 8K** (24 / 30 fps) | Working | 2-stream 8K pipeline |
@@ -28,6 +34,25 @@ Verified on OnePlus 9 (`LE2111` / `LE2115`), **SELinux Enforcing**, crDroid 16 /
 | **Long Exposure** (0.6x Ultra-Wide & 1x Main) | Working | Multi-second light trails and moving crowds on both Ultra-Wide and Main lenses |
 | **Panorama** (Rear & Front Selfie) | Working | Wide stitched panoramas on rear multi-camera and front IMX471 with live stitching guidance |
 | **Time-Lapse & Dual-View** | Working | Full multi-lens SAT zoom (`0.6x`, `1x`, `2x`, `5x`) and multi-stream recording |
+
+---
+
+## What's New in v2.3.3
+
+- **Real-Time Video Aperture Blur (`f` Slider)**:
+  - Extracted and ported 64-bit Anc Human Bokeh and Filter libraries from ColorOS 16 ODM (`libAncHumBokeh.so`, `libAncHumBokehPost.so`, `libancbase_rt_bokeh.so`, `libAncHumVideoBase.so`, `libAncFilter.so`).
+  - Fixed Video mode `SIGSEGV` crash by routing `EffectProcessorImpl` to the native `VideoBlurTexturePreview` engine (`com.oplus.video.neon.support = 0`), which properly utilizes `/odm/etc/camera/anc/merged_model` on SM8350.
+  - Video aperture slider works smoothly from `f/1.4` down to `f/16` (`Strong` to `Weak`) with live viewfinder depth rendering and video recording.
+- **64-bit AI Highlight & Night Vision Engine**:
+  - Extracted 64-bit `libnightvision.so` and `libfastov_dsp.so` from ColorOS 16 payload to replace legacy 32-bit blobs.
+  - Enabled `com.oplus.feature.ai.enhancement.video.support = 1`.
+- **Unified Master Mode Format Selector (`[ JPG | RAW | RAW+ ]`)**:
+  - Eliminated duplicate RAW menus by suppressing legacy 2-item toggle (`com.oplus.feature.professional.raw.support = 0`) while keeping the modern SuperRAW drawer (`com.oplus.feature.professional.super.raw.support = 1`).
+  - Capturing in `RAW+` executes 8-frame computational stacking and outputs rich 28.1 MB DNG SuperRAW files.
+- **Front Camera Panorama (`PANO`)**:
+  - Unlocked wide-angle selfie panoramas on the front Sony IMX471 sensor with real-time stitching guidance.
+- **60fps Video Focus Tracking & 4K30 LUT Filters**:
+  - Unlocked double-tap subject focus tracking at 60fps and removed 1080p resolution caps when applying creative LUT filters.
 
 ---
 
