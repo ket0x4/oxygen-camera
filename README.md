@@ -21,7 +21,7 @@ Verified on OnePlus 9 (`LE2111` / `LE2115`), **SELinux Enforcing**, crDroid 16 /
 | **Hi-Res 48MP / 50MP** | Working | Full-resolution Bayer remosaic (`IMX689` / `IMX766` / `IMX789`) |
 | **10-bit Color (HEIC)** | Working | 10-bit `yuv420p10le` hardware HEIC encoding |
 | **Portrait** (Rear 1x & 2x, Front) | Working | SAT Camera ID `12` dual-camera depth + OEM FaceBeauty |
-| **Night Mode** (0.6x Ultra-Wide, 1x Main, 2x IZOOM) | Working | SuperNight v3 (`0x8019`), 48MP in-sensor zoom (`IZOOM`), calibrated 10-bit black level (`64`) |
+| **Night Mode** (0.6x Ultra-Wide, 1x Main, 2x IZOOM) | Not Working | SuperNight v3 (`0x8019`), 48MP in-sensor zoom (`IZOOM`), calibrated 10-bit black level (`64`) |
 | **Master / Pro Mode** (JPEG, RAW & RAW+) | Working | Native 12-bit DNG RAW and computational 8-frame stacked SuperRAW (`RAW+`) with Hasselblad color calibration profile; unified clean format selector; 1-swipe access on bottom carousel |
 | **Video** (720p / 1080p / 4K @ 30/60fps) | Working | Real-time aperture blur (`f/1.4` - `f/16`), EIS, Live HDR, Dolby Vision HLG, 10-bit video, 60fps focus tracking, 4K30 LUT & director filters |
 | **AI Highlight & Ultra Night Video** | Working | 64-bit ColorOS 16 AI night vision pipeline (`libnightvision.so` + `libfastov_dsp.so`) |
@@ -34,25 +34,6 @@ Verified on OnePlus 9 (`LE2111` / `LE2115`), **SELinux Enforcing**, crDroid 16 /
 | **Long Exposure** (0.6x Ultra-Wide & 1x Main) | Working | Multi-second light trails and moving crowds on both Ultra-Wide and Main lenses |
 | **Panorama** (Rear & Front Selfie) | Working | Wide stitched panoramas on rear multi-camera and front IMX471 with live stitching guidance |
 | **Time-Lapse & Dual-View** | Working | Full multi-lens SAT zoom (`0.6x`, `1x`, `2x`, `5x`) and multi-stream recording |
-
----
-
-## What's New in v2.3.3
-
-- **Real-Time Video Aperture Blur (`f` Slider)**:
-  - Extracted and ported 64-bit Anc Human Bokeh and Filter libraries from ColorOS 16 ODM (`libAncHumBokeh.so`, `libAncHumBokehPost.so`, `libancbase_rt_bokeh.so`, `libAncHumVideoBase.so`, `libAncFilter.so`).
-  - Fixed Video mode `SIGSEGV` crash by routing `EffectProcessorImpl` to the native `VideoBlurTexturePreview` engine (`com.oplus.video.neon.support = 0`), which properly utilizes `/odm/etc/camera/anc/merged_model` on SM8350.
-  - Video aperture slider works smoothly from `f/1.4` down to `f/16` (`Strong` to `Weak`) with live viewfinder depth rendering and video recording.
-- **64-bit AI Highlight & Night Vision Engine**:
-  - Extracted 64-bit `libnightvision.so` and `libfastov_dsp.so` from ColorOS 16 payload to replace legacy 32-bit blobs.
-  - Enabled `com.oplus.feature.ai.enhancement.video.support = 1`.
-- **Unified Master Mode Format Selector (`[ JPG | RAW | RAW+ ]`)**:
-  - Eliminated duplicate RAW menus by suppressing legacy 2-item toggle (`com.oplus.feature.professional.raw.support = 0`) while keeping the modern SuperRAW drawer (`com.oplus.feature.professional.super.raw.support = 1`).
-  - Capturing in `RAW+` executes 8-frame computational stacking and outputs rich 28.1 MB DNG SuperRAW files.
-- **Front Camera Panorama (`PANO`)**:
-  - Unlocked wide-angle selfie panoramas on the front Sony IMX471 sensor with real-time stitching guidance.
-- **60fps Video Focus Tracking & 4K30 LUT Filters**:
-  - Unlocked double-tap subject focus tracking at 60fps and removed 1080p resolution caps when applying creative LUT filters.
 
 ---
 
