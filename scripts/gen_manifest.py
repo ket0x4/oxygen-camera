@@ -36,6 +36,11 @@ PAIR = [
     "odm/lib64/libAlgoProcess.so",
     "odm/lib64/libPreviewDecisionOld.so",
     "odm/lib64/libFilterWrapper.so",
+    "odm/lib/rfsa/adsp/libarcsoft_hdrplus_hvx_skel_lemonade.so",
+    "odm/lib/rfsa/adsp/libarcsoft_portraitsn_hvx_skel_20031.so",
+    "odm/lib/rfsa/adsp/libarcsoft_hdrplus_hvx_skel.so",
+    "odm/lib/rfsa/adsp/libarcsoft_portraitSN_hvx_skel.so",
+    "odm/lib/rfsa/adsp/libarcsoft_dualcam_refocus_skel.so",
 ]
 # 5.x additions to /odm: (path, or a prefix ending in / or -, kind)
 ADDED = [

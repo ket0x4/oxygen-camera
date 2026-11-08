@@ -21,7 +21,7 @@ Verified on OnePlus 9 (`LE2111` / `LE2115`), **SELinux Enforcing**, crDroid 16 /
 | **Hi-Res 48MP / 50MP** | Working | Full-resolution Bayer remosaic (`IMX689` / `IMX766` / `IMX789`) |
 | **10-bit Color (HEIC)** | Working | 10-bit `yuv420p10le` hardware HEIC encoding |
 | **Portrait** (Rear 1x & 2x, Front) | Working | SAT Camera ID `12` dual-camera depth + OEM FaceBeauty |
-| **Night Mode** (0.6x Ultra-Wide, 1x Main, 2x IZOOM) | Not Working | SuperNight v3 (`0x8019`), 48MP in-sensor zoom (`IZOOM`), calibrated 10-bit black level (`64`) |
+| **Night Mode** (0.6x Ultra-Wide, 1x Main, 2x IZOOM) | Working | SuperNight v3 (`0x8019`), 48MP in-sensor zoom (`IZOOM`), stock ArcSoft HVX DSP skeletons (multi-frame merge, no purple tint) |
 | **Master / Pro Mode** (JPEG, RAW & RAW+) | Working | Native 12-bit DNG RAW and computational 8-frame stacked SuperRAW (`RAW+`) with Hasselblad color calibration profile; unified clean format selector; 1-swipe access on bottom carousel |
 | **Video** (720p / 1080p / 4K @ 30/60fps) | Working | Real-time aperture blur (`f/1.4` - `f/16`), EIS, Live HDR, Dolby Vision HLG, 10-bit video, 60fps focus tracking, 4K30 LUT & director filters |
 | **AI Highlight & Ultra Night Video** | Working | 64-bit ColorOS 16 AI night vision pipeline (`libnightvision.so` + `libfastov_dsp.so`) |
@@ -34,6 +34,9 @@ Verified on OnePlus 9 (`LE2111` / `LE2115`), **SELinux Enforcing**, crDroid 16 /
 | **Long Exposure** (0.6x Ultra-Wide & 1x Main) | Working | Multi-second light trails and moving crowds on both Ultra-Wide and Main lenses |
 | **Panorama** (Rear & Front Selfie) | Working | Wide stitched panoramas on rear multi-camera and front IMX471 with live stitching guidance |
 | **Time-Lapse & Dual-View** | Working | Full multi-lens SAT zoom (`0.6x`, `1x`, `2x`, `5x`) and multi-stream recording |
+
+---
+
 
 ---
 

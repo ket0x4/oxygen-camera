@@ -794,3 +794,10 @@ In Hasselblad XPan mode, the UI was locked to the 45mm main lens. The 30mm Ultra
 
 
 
+
+
+### 18.13 Night Mode Purple Tint: True Root Cause (v2.3.4)
+- **Symptom**: Night photos kept a purple cast even with correct tuning and AWB patches.
+- **Root Cause**: The ROM's `/odm/lib/rfsa/adsp/libarcsoft_hdrplus_hvx_skel_lemonade.so` (536,169 bytes) failed FastRPC CDSP signature verification (`Error 0x80000406 ... signature verify start failed`). `ARC_SN_PreProcess` returned `-999`, SuperNight took the `SN_EXIT copy input to output` fallback and emitted a single unmerged RAW frame with raw gains/black levels. The Chromatix tuning binary was ruled out (stock tuning gives identical B/G).
+- **Fix**: Ship stock ColorOS 16 ArcSoft HVX skeletons (`libarcsoft_hdrplus_hvx_skel_lemonade.so` 517,368 bytes sha256 `2454a98f...`, plus the other ArcSoft skels) as `pair` entries in `aox/manifest.json`. Removed the experimental blue-pedestal hook from `scripts/patch_algo.py`.
+- **Result**: `ARC_SN_PreProcess/Process/PostProcess` all return 0; R/G 1.05, B/G 0.99. SELinux stays Enforcing.

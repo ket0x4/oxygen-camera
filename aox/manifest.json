@@ -2719,6 +2719,51 @@
         "libdl.so",
         "libc.so"
       ]
+    },
+    {
+      "path": "odm/lib/rfsa/adsp/libarcsoft_hdrplus_hvx_skel_lemonade.so",
+      "source": "vendor",
+      "group": "pair",
+      "kind": "library",
+      "install": "pair",
+      "sha256": "2454a98fa11e1ebc041d377e683a3c6152e96c77a364eae854c244410ede10eb",
+      "size": 517368
+    },
+    {
+      "path": "odm/lib/rfsa/adsp/libarcsoft_portraitsn_hvx_skel_20031.so",
+      "source": "vendor",
+      "group": "pair",
+      "kind": "library",
+      "install": "pair",
+      "sha256": "8495cb01b1cff399b3d32eed972b6089cf1c0fc96980cab9ebdc30a6ec1579de",
+      "size": 512152
+    },
+    {
+      "path": "odm/lib/rfsa/adsp/libarcsoft_hdrplus_hvx_skel.so",
+      "source": "vendor",
+      "group": "pair",
+      "kind": "library",
+      "install": "pair",
+      "sha256": "ebc5a156e143d320602fba9080e86afd3628ce7772b5297063e27147bc8337da",
+      "size": 451064
+    },
+    {
+      "path": "odm/lib/rfsa/adsp/libarcsoft_portraitSN_hvx_skel.so",
+      "source": "vendor",
+      "group": "pair",
+      "kind": "library",
+      "install": "pair",
+      "sha256": "13710acab64db1ab68e2a27d263c1e0f8a29ff5a0c1562408e8226a1c4261d4a",
+      "size": 468344
+    },
+    {
+      "path": "odm/lib/rfsa/adsp/libarcsoft_dualcam_refocus_skel.so",
+      "source": "vendor",
+      "group": "pair",
+      "kind": "library",
+      "install": "pair",
+      "sha256": "6367922ce09719e302dbfa1bef5d7e42624cb15ae33f3eea6789fee2b24c8f8d",
+      "size": 314872
     }
   ]
 }
