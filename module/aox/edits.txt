@@ -113,6 +113,11 @@ only|lemonade|tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.vi
 only|lemonade|tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.video.1080p.120fps.zoom.range|Float|2|*|1,10
 only|lemonade|tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.video.1080p120fps.max.zoom.list|Float|3|*|1,2.9,10
 only|lemonadep|tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.video.120fps.camera.main.only.support|Byte|1|*|1
+# the 9 Pro HAL reports SAT tele; re-enable the app's tele camera gate
+only|lemonadep|tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.sat.tele.support|Byte|1|*|1
+# normalize the 4K60 wide-SuperEIS experiment (no-op on stock values)
+only|lemonade|tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.video.eis.fps|Int32|1|60|30
+only|lemonade|tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.video.super.eis.wide.60fps.support|Byte|1|1|0
 
 # keep the main sensor streaming while the zoom moves below 1x
 only|lemonade|ini|odm/etc/camera/CameraHWConfiguration.config|SatSmoothZoom|closeSlaveThresholdTime|-|1

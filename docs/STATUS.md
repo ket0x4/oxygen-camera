@@ -99,6 +99,7 @@ SELinux: **Enforcing**
   1. Added `tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.video.super.eis.wide.support|Byte|1|*|1` to `module/aox/edits.txt`.
   2. Added `tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.video.super.eis.all.fps.support|Byte|1|*|1` to `module/aox/edits.txt`.
 - **Verification**: Enabled `Ultra Steady` in `VIDEO` mode (`SubSet` drawer) on OnePlus 9 (`LE2115`), verified `Ultra SteadyOn` badge (`com.oplus.camera:id/super_eis`) on the top bar at `4K·30`, confirmed `AlgoSwitchConfig: getPreviewConfig, config mCameraMode: superEISProVideo` with `previewSessionOperationMode: 0x8028` (`32808`), and recorded a 4K 30fps stabilized video (`3840x2160`, `21.9 MB`).
+- **4K60 test (2.3.9)**: Enabling `com.oplus.feature.video.super.eis.wide.60fps.support=1` alone, and together with `com.oplus.feature.video.eis.fps=60`, still made the app fall back to `4K·30` when `Steady` was enabled. The mode reported `mCameraMode: superEISProVideo` with 3840x2160 streams, but the 60 fps cap is enforced by the app/bandwidth; the flags were not kept.
 
 ### A4. Hyper-Lapse / Fast Video Multi-Lens Zoom (`com.oplus.feature.fast.video.sat.support`)
 - **Root Cause & Finding**:

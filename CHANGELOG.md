@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.3.9
+
+- Re-enable the 9 Pro tele camera gate: `com.oplus.feature.sat.tele.support=1`
+  on `lemonadep` only. The 9 Pro HAL already reports SAT tele
+  (`com.oplus.sat.tele.support=1`); the app switch bar was hiding it.
+  Device validation on the 9 Pro is still pending.
+- Tested the 4K60 wide SuperEIS flags on the OnePlus 9. Enabling
+  `super.eis.wide.60fps.support` alone, and together with
+  `video.eis.fps=60`, still makes the app fall back to 4K30 when Steady is
+  enabled. The stock 30 fps cap is a real app/bandwidth limit, so the flags
+  were not kept.
+
 ## 2.3.8
 
 - On Android 17 the crashing Hyperlapse EIS toggle is hidden with a new

@@ -147,6 +147,20 @@ class Installer(unittest.TestCase):
         tags = {e["VendorTag"]: e for e in json.loads(data, strict=False) if "VendorTag" in e}
         self.assertEqual(tags["com.oplus.feature.hyper.lapse.support"]["Value"], "1")
 
+    def test_tele_gate_enabled_on_9_pro(self):
+        self.fixtures(PRO_FIXTURES)
+        self.install(device="lemonadep")
+        data = staged(self.modpath, "odm/etc/camera/config/oplus_camera_config").read_text()
+        tags = {e["VendorTag"]: e for e in json.loads(data, strict=False) if "VendorTag" in e}
+        self.assertEqual(tags["com.oplus.feature.sat.tele.support"]["Value"], "1")
+
+    def test_tele_gate_untouched_on_9(self):
+        self.fixtures()
+        self.install()
+        data = staged(self.modpath, "odm/etc/camera/config/oplus_camera_config").read_text()
+        tags = {e["VendorTag"]: e for e in json.loads(data, strict=False) if "VendorTag" in e}
+        self.assertEqual(tags.get("com.oplus.feature.sat.tele.support", {}).get("Value", "0"), "0")
+
     def test_pro_base_configs_become_pro_head(self):
         self.fixtures(PRO_FIXTURES)
         self.install(device="lemonadep")

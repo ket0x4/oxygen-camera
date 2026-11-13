@@ -24,7 +24,7 @@ OplusCamera **7.013.11** (ColorOS 16) for the OnePlus 9 / 9 Pro on Android 16–
 | AI | Highlight video, Ultra Night Video |
 | Extras | 10-bit HEIC, XPan, Long Exposure, Panorama, Time-Lapse, Dual-View, Slo-mo |
 
-**Known limits:** front SuperNight is HAL-limited on the IMX471; Hyperlapse EIS is hidden on Android 17 (7.x SDK crash), while Time-Lapse keeps SAT zoom.
+**Known limits:** front SuperNight is HAL-limited on the IMX471; Hyperlapse EIS is hidden on Android 17 (7.x SDK crash), while Time-Lapse keeps SAT zoom; wide SuperEIS at 4K is capped at 30 fps.
 
 ## Requirements
 
