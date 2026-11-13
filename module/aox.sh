@@ -25,6 +25,14 @@ aox_log() {
     echo "$*" >> "$AOX_LOG"
 }
 
+# Count the lines of one level inside a "## section" of aox.log.
+aox_count() {
+    awk -v section="$1" -v level="$2" '
+        /^## / { inside = ($0 == "## " section); next }
+        inside && index($0, level " ") == 1 { n++ }
+        END { print n + 0 }' "$AOX_LOG"
+}
+
 # odm/... -> system/vendor/odm/..., vendor/... -> system/vendor/...
 aox_staged() {
     case "$1" in
@@ -676,20 +684,52 @@ aox_prune() {
 aox_install() {
     [ -d "$MODPATH/$AOX_DIR" ] || return 0
     AOX_LOG="$MODPATH/aox.log"
-    : > "$AOX_LOG"
-    aox_log "device $AOX_DEVICE"
-    ui_print "Applying aox camera changes where this ROM lacks them."
+    module_version=$(sed -n 's/^version=//p' "$MODPATH/module.prop" 2>/dev/null)
+    app_version=$(cat "$MODPATH/$AOX_DIR/app-version.txt" 2>/dev/null)
+    {
+        echo "# Oplus Camera installer"
+        echo "# app=${app_version:-unknown} module=${module_version:-unknown} device=$AOX_DEVICE"
+        echo "# date=$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)"
+    } > "$AOX_LOG"
     if [ -f "$MODPATH/$AOX_DIR/app.txt" ]; then
+        aox_log ""
+        aox_log "## app"
         aox_decide_app || return 1
         aox_decide_framework
     fi
+    aox_log ""
+    aox_log "## libraries"
     aox_select_libraries
     aox_check_pairs || return 1
+    aox_log ""
+    aox_log "## configs"
     aox_apply_edits
     aox_commit_configs
     aox_prune
-    applied=$(grep -c '^apply\|^add' "$AOX_LOG")
-    ui_print "aox: camera app: $AOX_APP; $applied change(s) applied; details in aox.log."
+
+    lib_added=$(aox_count libraries add)
+    lib_kept=$(aox_count libraries keep)
+    lib_skipped=$(aox_count libraries skip)
+    cfg_applied=$(aox_count configs apply)
+    cfg_ready=$(aox_count configs ok)
+    cfg_skipped=$(aox_count configs skip)
+    failed=$(grep -c '^fail ' "$AOX_LOG" 2>/dev/null || true)
+    {
+        echo ""
+        echo "## summary"
+        echo "summary app=${AOX_APP:-none} installed=$lib_added applied=$cfg_applied ready=$cfg_ready kept=$lib_kept skipped=$lib_skipped failed=${failed:-0}"
+    } >> "$AOX_LOG"
+
+    case "$AOX_APP" in
+        install) app_state="installed (no system camera)" ;;
+        replace) app_state="replaced older system camera" ;;
+        rom) app_state="kept ROM camera, fixes only" ;;
+        *) app_state="$AOX_APP" ;;
+    esac
+    ui_print "  app        $app_state"
+    ui_print "  libraries  $lib_added installed · $lib_kept kept · $lib_skipped skipped"
+    ui_print "  configs    $cfg_applied applied · $cfg_ready ready · $cfg_skipped skipped"
+    ui_print "  log        aox.log"
 }
 
 # Give staged replacements the device file's SELinux label (after the

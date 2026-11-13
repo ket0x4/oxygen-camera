@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.3.7
+
+- Installer output is now structured: a device/ROM/module banner, phase
+  headers, and a per-category summary (app, libraries, configs, log path).
+- `aox.log` has a version/date header, `## app` / `## libraries` /
+  `## configs` sections, and a machine-readable `summary` line.
+- The Action button prints an aligned diagnostics report instead of prose.
+- README refreshed for 2.3.x: installation, in-place updates, 16 KB
+  alignment, reproducible builds, CI and release channels.
+
 ## 2.3.6
 
 - Tap-to-focus no longer rebuilds the whole Qualcomm SAT pipeline. Tapping the

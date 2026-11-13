@@ -8,8 +8,8 @@ elif [ -n "$MAGISK_VER" ] || [ -d /data/adb/magisk ]; then
 else
     ROOT_MNGR="Root"
 fi
-ui_print "Root manager: $ROOT_MNGR"
-ui_print "ROM: $(getprop ro.build.display.id)"
+ui_print " "
+ui_print "  Oplus Camera — OnePlus 9 / 9 Pro"
 # OnePlus 9 (lemonade) and 9 Pro (lemonadep): builds report the
 # codename or the marketing name.
 camera_device=
@@ -18,8 +18,7 @@ for prop in ro.product.vendor.device ro.product.device ro.build.product; do
         lemonade|lemonadep|OnePlus9|OnePlus9Pro) camera_device=$(getprop "$prop"); break ;;
     esac
 done
-[ -n "$camera_device" ] || abort "Expected a OnePlus 9 or OnePlus 9 Pro."
-ui_print "Device: $camera_device"
+[ -n "$camera_device" ] || abort "Expected a OnePlus 9 or a OnePlus 9 Pro."
 case "$camera_device" in
     lemonadep|OnePlus9Pro) AOX_DEVICE=lemonadep ;;
     *) AOX_DEVICE=lemonade ;;
@@ -29,19 +28,21 @@ case "$CAMERA_SDK" in
     ''|*[!0-9]*) abort "Cannot determine Android SDK version." ;;
 esac
 [ "$CAMERA_SDK" -ge 36 ] || abort "Requires Android 16 / SDK 36 or newer."
-if [ "$CAMERA_SDK" -eq 36 ]; then
-    ui_print "Android 16 (SDK 36) detected."
-elif [ "$CAMERA_SDK" -eq 37 ]; then
-    ui_print "Android 17 (SDK 37) detected."
-else
-    ui_print "SDK $CAMERA_SDK: newer Android support is experimental."
-fi
+case "$CAMERA_SDK" in
+    36) ANDROID_LABEL="Android 16 (SDK 36)" ;;
+    37) ANDROID_LABEL="Android 17 (SDK 37)" ;;
+    *) ANDROID_LABEL="Android SDK $CAMERA_SDK (experimental)" ;;
+esac
 [ -x /system/bin/mkfs.erofs ] || [ -x /system/bin/mkfs.ext4 ] || abort "Missing filesystem tools (mkfs.erofs / mkfs.ext4)."
 grep -qw overlay /proc/filesystems || abort "This kernel needs OverlayFS support."
-ui_print "Installing Oplus Camera $(cat "$MODPATH/aox/app-version.txt" 2>/dev/null) for the OnePlus 9 / 9 Pro."
-ui_print "Module version $(sed -n 's/^version=//p' "$MODPATH/module.prop")."
-ui_print "Standalone mounting: Mountify is not required."
-ui_print "A reboot is required for system permissions and library discovery."
+MODVER=$(sed -n 's/^version=//p' "$MODPATH/module.prop" 2>/dev/null)
+APPVER=$(cat "$MODPATH/aox/app-version.txt" 2>/dev/null)
+ui_print "  app ${APPVER:-unknown} · module ${MODVER:-unknown} · $ROOT_MNGR"
+ui_print " "
+ui_print "> Checking compatibility"
+ui_print "  device  $camera_device"
+ui_print "  rom     $(getprop ro.build.display.id) · $ANDROID_LABEL"
+ui_print "  mount   standalone OverlayFS (no Mountify)"
 if [ -f "$MODPATH/ksu-visibility" ]; then
     set_perm "$MODPATH/ksu-visibility" 0 0 0700
     # Without the helper the boot scripts do nothing and the App Profile
@@ -49,6 +50,8 @@ if [ -f "$MODPATH/ksu-visibility" ]; then
     "$MODPATH/ksu-visibility" check >/dev/null 2>&1 || rm -f "$MODPATH/ksu-visibility"
 fi
 if [ -f "$MODPATH/aox.sh" ]; then
+    ui_print " "
+    ui_print "> Applying camera changes"
     # shellcheck source=module/aox.sh
     . "$MODPATH/aox.sh"
     if ! aox_install; then
@@ -79,7 +82,8 @@ if [ -f "$MODPATH/native-labels.txt" ]; then
     done < "$MODPATH/native-labels.txt"
 fi
 [ -f "$MODPATH/aox.sh" ] && aox_label
-ui_print "Preparing camera filesystem (one-time installation step)."
+ui_print " "
+ui_print "> Preparing camera image"
 # shellcheck source=module/mount-camera.sh
 . "$MODPATH/mount-camera.sh"
 if ! camera_prepare_image; then
@@ -91,17 +95,20 @@ if ! camera_prepare_image; then
 fi
 if [ "$(getprop sys.boot_completed)" = "1" ] && [ -x /system/bin/pm ]; then
     if pm path com.oplus.camera >/dev/null 2>&1; then
-        ui_print "Optimizing DEX (AOT speed compilation)..."
+        ui_print " "
+        ui_print "> Optimizing app (AOT)"
         pm compile -m speed --secondary-dex com.oplus.camera >/dev/null 2>&1 || true
+        ui_print "  dex     speed compilation requested"
     fi
 fi
-ui_print "Ready. Reboot, open Oplus Camera and grant its permissions."
+ui_print " "
+ui_print "  Installation complete — reboot to activate."
+ui_print "  Open Oplus Camera and grant its permissions."
 if [ -f "$MODPATH/ksu-visibility" ]; then
-    ui_print "After the reboot the module turns Umount modules off for the camera"
-    ui_print "and the launcher by itself. If the camera still closes on opening:"
-    ui_print "KernelSU App Profile: Camera -> Custom -> Umount modules OFF."
+    ui_print "  Visibility automatic: camera and launcher get Umount modules OFF."
+    ui_print "  If the camera still closes: App Profile → Oplus Camera → Umount modules OFF."
 else
-    ui_print "This KernelSU has no app profile interface the module can use."
-    ui_print "KernelSU App Profile: Camera -> Custom -> Umount modules OFF."
-    ui_print "Leave camera Superuser access OFF."
+    ui_print "  This KernelSU has no usable app profile interface."
+    ui_print "  App Profile → Oplus Camera → Custom → Umount modules OFF."
+    ui_print "  Leave camera Superuser access OFF."
 fi

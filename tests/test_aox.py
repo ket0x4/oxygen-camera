@@ -79,7 +79,7 @@ class Installer(unittest.TestCase):
     def test_base_configs_become_head(self):
         self.fixtures()
         log = self.install()
-        self.assertNotIn("skip", log)
+        self.assertNotIn("skip  ", log)
         tags = lambda data: {e["VendorTag"]: e for e in json.loads(data, strict=False) if "VendorTag" in e}
         for path in CONFIGS:
             result = staged(self.modpath, path).read_bytes()
