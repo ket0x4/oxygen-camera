@@ -128,4 +128,4 @@ The scripts, patches, and module files in this repository are licensed under the
 - `native/ksu_visibility.c` and `tests/visibility_policy_device.c` are licensed under **GPL-2.0-only**.
 - `native/uah-client/uah_client.c` is licensed under **Apache-2.0**.
 
-Proprietary OEM camera binaries and libraries are not tracked in this repository and remain the property of their respective owners.
+Proprietary OEM camera binaries and libraries are not tracked in this repository and remain the property of their respective owners, except the small stock compatibility shim under `aox/stock/` that is required as a build input.

@@ -13,6 +13,7 @@
 *.odex
 *.vdex
 *.so
+!aox/stock/**/*.so
 *.img
 *.bin
 *.zip
