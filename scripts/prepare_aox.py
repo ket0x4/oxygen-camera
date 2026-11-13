@@ -12,8 +12,10 @@ import base64
 import concurrent.futures
 import hashlib
 import http.client
+import io
 import json
 import pathlib
+import tarfile
 import time
 import urllib.request
 
@@ -81,6 +83,27 @@ def main():
     args = parser.parse_args()
     manifest = json.loads(MANIFEST.read_text())
     sources = manifest["sources"]
+
+    # A few pinned inputs are not in any public tree (the camera APK and the
+    # system_ext payload extracted from firmware). They travel as one bundle.
+    bundle = manifest.get("source_bundle")
+    if bundle:
+        marker = args.cache / "inputs" / f"aox-sources-{bundle['sha256']}"
+        if not marker.exists():
+            data = fetch(bundle["url"])
+            if hashlib.sha256(data).hexdigest() != bundle["sha256"]:
+                raise SystemExit("Checksum mismatch: aox-sources bundle")
+            with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as archive:
+                for member in archive.getmembers():
+                    name = pathlib.PurePosixPath(member.name)
+                    if name.is_absolute() or ".." in name.parts or not (member.isfile() or member.isdir()):
+                        raise SystemExit(f"Unsafe archive member: {member.name}")
+                try:
+                    archive.extractall(args.cache, filter="data")
+                except TypeError:
+                    archive.extractall(args.cache)
+            marker.parent.mkdir(parents=True, exist_ok=True)
+            marker.write_text(bundle["sha256"] + "\n")
 
     def source_url(name, path):
         return raw_url(sources[name]["repository"], sources[name]["revision"], path)

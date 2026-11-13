@@ -27,6 +27,10 @@
       "revision": "60bd9229c6b373aa7f3c087b50a1dce4c627bf23"
     }
   },
+  "source_bundle": {
+    "url": "https://github.com/ket0x4/oxygen-camera/releases/download/aox-sources/aox-sources.tar.gz",
+    "sha256": "ca5551ef3ba987b1097dafcbb9f94537a3641b974a9eee35e0dddc1dc8312276"
+  },
   "replace_extra": {
     "lemonade:odm/etc/camera/config/camera_unit_feature_config.protobuf": [
       "1081f417c43caeb54a957a94afcbbef743576cc2251c9c5c58ad0e36b8ec55ec",
