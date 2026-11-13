@@ -36,8 +36,9 @@ OnePlus 9 or 9 Pro · Android 16/17 · SELinux enforcing · OverlayFS kernel · 
 2. Install it in KernelSU Next, APatch or Magisk, then reboot.
 3. Open Oplus Camera and grant permissions.
 
-Updates are offered from the module card. If the camera cannot see the module, set
-**App Profile → Oplus Camera → Umount modules OFF**.
+Updates are offered from the module card through the static manifest at
+`https://raw.githubusercontent.com/ket0x4/oxygen-camera/main/update.json`.
+If the camera cannot see the module, set **App Profile → Oplus Camera → Umount modules OFF**.
 
 ## Build
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.3.10
+
+- Move the update manifest into the repository (`update.json` on `main`) and
+  point `updateJson` at the static raw URL instead of the GitHub release
+  redirect. The release workflow refreshes `update.json` after every build.
+
 ## 2.3.9
 
 - Re-enable the 9 Pro tele camera gate: `com.oplus.feature.sat.tele.support=1`
