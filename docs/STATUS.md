@@ -36,18 +36,18 @@ SELinux: **Enforcing**
 ### Category C: Front Camera (`Sony IMX471` — 16MP)
 - [x] **C1. Front Camera SuperNight Mode** (`com.oplus.feature.front.supernight.support = 1`)
   - *Goal*: Enable Night Mode on the front camera (`Mode[23] = 0x8019`, `2304x1728` RAW + screen fill flash).
-  - *Status*: **HAL-LIMITED ON IMX471 PLATFORM** (Front IMX471 HAL sets `max_buffer = 0` for input streams, lacking hardware stream reprocessing in Qualcomm CamX. Detailed breakdown documented in PROBLEMS_AND_FIXES.md).
+  - *Status*: **HAL-LIMITED ON IMX471 PLATFORM** (front IMX471 HAL sets `max_buffer = 0` for input streams and has no stream reprocessing in Qualcomm CamX; the tag is left at stock `0`. See PROBLEMS_AND_FIXES.md 18.8).
 - [x] **C2. Front Camera Panorama** (`com.oplus.feature.front.panorama.support = 1`)
   - *Goal*: Enable wide selfie panorama on the front camera (`front_main` `panorama_mode`).
   - *Status*: **VERIFIED & ENABLED** (`Switch to Front Camera` button unlocked in `PANO` mode; preview switches to front camera with active panorama guidance UI; captures and saves stitched panoramic photo `IMG20261107213600.jpg`).
 
 ### Category D: Video Pipeline Enhancements
-- [x] **D1. AI Highlight Video** (`com.oplus.feature.ai.enhancement.video.support`)
+- [x] **D1. AI Highlight Video** (`com.oplus.feature.ai.enhancement.video.support = 1`)
   - *Goal*: Enable automatic scene-adaptive switching between Live HDR Video (`0x840B`) and Ultra Night Video (`0x80AD`).
-  - *Status*: **PLATFORM VENDOR BLOB LIMITATION** (Enabling AI enhancement video exposes the `key_ultra_night_video` toggle. Toggling Night Video invokes `APSNightVisionNode::doInit` in `/odm/lib64/libAlgoInterface.so`, which attempts to `dlopen("/odm/lib64/libnightvision.so")`. On OnePlus 9 / SM8350, OnePlus only shipped the 32-bit `/odm/lib/libnightvision.so` and no 64-bit build exists in stock firmware. As a 64-bit process, `com.oplus.camera` aborts with SIGSEGV/SIGBUS upon calling null function pointer. Must remain `0` to avoid crash trap. Full architectural breakdown in PROBLEMS_AND_FIXES.md).
-- [x] **D2. Video Portrait Aperture Blur & Crash Resolution** (`com.oplus.video.only.blur.support = 0`, `com.oplus.video.neon.support = 0`)
-  - *Goal*: Eliminate `SIGSEGV` crash in `libAncHumBokeh-jni.so` caused by missing Anchor Human Bokeh models when entering Video mode or touching the aperture (`f`) slider.
-  - *Status*: **RESOLVED** (`com.oplus.video.only.blur.support` and `com.oplus.video.neon.support` are reverted to stock `0`. Removes the crashing `f` slider and prevents `PreviewGLThread` native crashes).
+  - *Status*: **RESOLVED & ENABLED** (the module ships the 64-bit ColorOS 16 `libnightvision.so` and `libfastov_dsp.so`, so `APSNightVisionNode::doInit` no longer hits the missing 64-bit symbol; the old 32-bit-only limitation no longer applies. See PROBLEMS_AND_FIXES.md 18.10 D1).
+- [x] **D2. Video Portrait Aperture Blur & Crash Resolution** (`com.oplus.video.neon.support = 0`)
+  - *Goal*: Provide the real-time aperture (`f`) slider and blurred video without the `libAncHumBokeh-jni.so` / `PreviewGLThread` crashes.
+  - *Status*: **RESOLVED & WORKING** (`com.oplus.video.neon.support = 0` routes to `VideoBlurTexturePreview`; `com.ocs.camera.ipu.frontblur.support = 1` and `backblur.support = 1`. The `f/1.4`–`f/16` slider, live blur preview and recorded blurred video are verified. See PROBLEMS_AND_FIXES.md 18.10 D2).
 - [x] **D3. 60fps Video Subject Focus Tracking** (`com.oplus.video.60fps.track.focus.support = 1`, `com.oplus.video.focus.track.30fps.only = 0`)
   - *Goal*: Unlock double-tap subject focus tracking at 60fps (previously restricted to 30fps only).
   - *Status*: **VERIFIED & ENABLED** (`com.oplus.video.focus.track.30fps.only = 0` and `com.oplus.video.60fps.track.focus.support = 1` added to `edits.txt`; unlocks 60fps Qualcomm CamX subject tracking).
@@ -65,6 +65,11 @@ SELinux: **Enforcing**
 - [x] **E3. Group Shot Enhancement** (`com.oplus.feature.groupshot.support = 1`)
   - *Goal*: Enable multi-face group shot enhancement algorithms for sharper faces in group photos.
   - *Status*: **VERIFIED & ENABLED** (`com.oplus.feature.groupshot.support = 1` added to `edits.txt`; activates OEM group face optimization pipeline).
+
+### Category F: Responsiveness
+- [x] **F1. Tap-to-Focus Latency** (`fg.b2.i` preview restart and Unit-SDK focus keys)
+  - *Goal*: Focus on a tapped subject without rebuilding the camera session.
+  - *Status*: **VERIFIED** (`fg.b2.i` no longer sends FOCUS_MODE/AF_REGIONS/AE_REGIONS through the Unit SDK and no longer calls `ModeManager.restartPreview`; Camera2 AF/AE keys still move the lens. Tap-to-focus: 0 CamX pipeline recreations, preview steady at 19–20 fps, tap→autofocus ~16 ms, focus distance 23→30. See PROBLEMS_AND_FIXES.md 16.4).
 
 ---
 
@@ -192,6 +197,11 @@ SELinux: **Enforcing**
 ### E4. Master Mode Unified Format Selector & Computational SuperRAW (`RAW+`)
 - **Fix**: Set `com.oplus.feature.professional.raw.support = 0` to eliminate duplicate legacy 2-item toggle, while maintaining `com.oplus.feature.professional.super.raw.support = 1` and `com.oplus.feature.raw.camera.type.support = camera_main,camera_ultra_wide,camera_tele`.
 - **Result**: Unified `Format` drawer displaying `[ JPG | RAW | RAW+ ]`. Verified 8-frame computational SuperRAW DNG generation (`IMG20261107225834.dng`, 28.1 MB).
+
+### F1. Tap-to-Focus Latency
+- **Root Cause**: `fg.b2.i()` set `FOCUS_MODE`, `AF_REGIONS` and `AE_REGIONS` through the Oplus Unit SDK and then called `cm.d4.h0()`. The SDK's preview decision changed (3HDR sensor mode), so `ProducerImpl.startPreview()` made CamX tear down and recreate `MultiCameraRealtime0` (~1.5 s) on every viewfinder tap.
+- **Fix**: `scripts/patch_apk.py` patches `classes4.dex` (the smali version cannot reassemble it): it zeroes the five Unit-SDK `fg.a.e(PreviewKey, …)` calls in `fg.b2.i()` and the `cm.d4.h0()` invoke, then refreshes the dex checksum and SHA-1. The Camera2 `CONTROL_AF_MODE` / `AF_REGIONS` / `AE_REGIONS` keys remain.
+- **Verification**: Before: 4–9 CamX pipeline recreations per tap, preview draw rate dropped to 2–12 fps. After: 0 recreations, steady 19–20 fps, tap→autofocus ~16 ms, lens focus distance moved 23→30, no `restartPreview` and no crashes.
 
 
 

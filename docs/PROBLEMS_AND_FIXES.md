@@ -622,7 +622,7 @@ In Hasselblad XPan mode, the UI was locked to the 45mm main lens. The 30mm Ultra
    - Occasional frame drops and viewfinder stutter when switching between complex camera modes.
    - Minor capture latency during multi-frame burst/HDR triggers.
 2. The Qualcomm Camera Provider HAL (`android.hardware.camera.provider@2.4-service_64`) and `cameraserver` run by default at normal priority (`nice 0`), competing for CPU cycles on the Kryo 680 big/prime cores with other background processes during heavy RAW and CamX algorithm execution.
-3. Native libraries (.so) inside the APK should comply with Android 15/16/17 16KB page-alignment requirements to enable direct virtual memory mapping (`mmap`) without kernel page translation overhead.
+3. Native libraries in the APK and in the module payload must be 16 KB compatible: every 64-bit `PT_LOAD` segment needs `p_align >= 0x4000`, and the APK's uncompressed `.so` entries need 16 KB-aligned ZIP offsets. This enables direct `mmap` on Android 15/16/17 devices and passes page-size checks.
 
 ### Detailed Fix
 1. **Automated AOT 'speed' Compilation**:
@@ -633,9 +633,13 @@ In Hasselblad XPan mode, the UI was locked to the 45mm main lens. The 30mm Ultra
      - `android.hardware.camera.provider@2.4-service_64`
      - `cameraserver`
    - Gives CamX hardware pipelines and image processing engines priority scheduling on the Cortex-A78 / Cortex-X1 performance cores.
-3. **16KB Page Size Alignment**:
-   - In [scripts/patch_apk.py](file:///home/ket/Projects/ooscam/scripts/patch_apk.py), updated zipalign command to use `-P 16 -f 4` (aligning uncompressed `.so` libraries to 16KB boundaries for Android 15+ 16KB page agnostic support, with automatic fallback to `-p` if unsupported).
-   - Preserves uncompressed (`ZIP_STORED`) 4-byte aligned status for all 34 `classes*.dex` files for direct ART memory-mapping.
+3. **16 KB Page Size Alignment**:
+   - [scripts/elf_align.py](file:///home/ket/Projects/ooscam/scripts/elf_align.py) raises every 64-bit `PT_LOAD` `p_align` to `0x4000` in both the APK entries and the module payload; existing 64 KB alignments are preserved.
+   - [scripts/patch_apk.py](file:///home/ket/Projects/ooscam/scripts/patch_apk.py) zipaligns stored `.so` entries with `-P 16 -f 4`, and [scripts/build.py](file:///home/ket/Projects/ooscam/scripts/build.py) now asserts both 16 KB ELF alignment and 16 KB ZIP offsets, failing the build otherwise.
+   - Dex files remain `ZIP_STORED` and 4-byte aligned for direct ART memory-mapping.
+4. **Tap-to-Focus Preview Restart**:
+   - `fg.b2.i()` sent `FOCUS_MODE`, `AF_REGIONS` and `AE_REGIONS` through the Unit SDK and then called `cm.d4.h0()`. That changed the APS preview decision (3HDR sensor mode), so `ProducerImpl.startPreview()` made CamX rebuild `MultiCameraRealtime0` (~1.5 s) on every tap.
+   - [scripts/patch_apk.py](file:///home/ket/Projects/ooscam/scripts/patch_apk.py) patches `classes4.dex` in place (this smali build cannot reassemble it): the five Unit-SDK `fg.a.e(PreviewKey, …)` calls in `fg.b2.i()` and the `cm.d4.h0()` invoke are replaced with NOPs, then the dex checksum and SHA-1 are refreshed. The Camera2 `CONTROL_AF_MODE` / `AF_REGIONS` / `AE_REGIONS` keys remain, so the lens still focuses.
 
 ### Live Verification
 - `dumpsys package com.oplus.camera` confirms `arm64: [status=speed] [reason=cmdline]`.
@@ -643,6 +647,8 @@ In Hasselblad XPan mode, the UI was locked to the 45mm main lens. The 30mm Ultra
 - Cold launch time measured via `am start-activity -W`: dropped to **572 ms**!
 - `ps -eo pid,ni,pri,comm` confirms `android.hardware.camera.provider` and `cameraserver` running at `nice -10`.
 - Viewfinder rendering and mode switching are instantaneous and silky smooth.
+- `python3 scripts/elf_align.py check build/module` reports 0 libraries below 16 KB; `build.check_apk_alignment` enforces 16 KB ELF and ZIP alignment.
+- Tap-to-focus: 0 CamX pipeline recreations per tap, preview steady at 19–20 fps, tap→autofocus ~16 ms, lens focus distance moved 23→30.
 
 ---
 
