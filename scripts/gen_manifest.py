@@ -51,6 +51,12 @@ ADDED = [
     ("odm/etc/camera/filters_lut/gt-", "data"),
     ("odm/etc/camera/selfbokehmodel.bin", "data"),
     ("odm/etc/camera/selfbokehParam.json", "data"),
+    # Referenced (dlopen / DT_NEEDED) by the 5.x/7.x libraries but absent from the ROM's /odm
+    *[(f"odm/lib64/{name}.so", "library") for name in (
+        "libAncHumanSegFigureFusion", "libAncHumanDoubleExposure", "libRedeyeReduce", "libTrafficMode",
+        "libPerfectColor", "libalCFR", "libaisd", "libAncSegBaseSdk", "libancbase_segbase",
+        "libCaptureBokeh", "libBokehPre", "libaiseg", "libyuvwrapper", "libapsyuv", "libpngwrapper",
+        "libapspng", "libFDClite", "libarcsoft_long_exposure_preview", "libarcsoft_long_exposure_capture")],
 ]
 
 # Changed at build time: path -> patch (scripts/patch_sdk.py, patch_hal.py).

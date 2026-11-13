@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Patch OplusCamera.apk to fix RAW capture, Log Video crash, Portrait freeze, and Front camera viewfinder.
+"""Patch OplusCamera.apk to fix RAW capture, Log Video crash, Portrait freeze, Front camera viewfinder,
+and the tap-to-focus preview stall.
 
 Fixes applied:
 1. classes.dex:
@@ -31,14 +32,129 @@ Fixes applied:
 6. classes33.dex:
    - jh.x: In onDismiss of LogPreviewView popup, null-checks coui_popup_wrapper and this.e before
      calling removeView to prevent NPE on dismiss.
+
+7. classes4.dex:
+   - fg.b2.i(): drops the Unit-SDK PreviewKey focus parameters and the unconditional
+     ModeManager restart. The Camera2 AF/AE keys still move the lens, but the APS no longer
+     changes its preview decision and the HAL no longer rebuilds the SAT pipeline (~1.5 s)
+     on every viewfinder tap.
 """
+import hashlib
 import os
 import pathlib
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
 import zipfile
+import zlib
+
+import elf_align
+
+
+def _dex_uleb128(data, offset):
+    value = 0
+    shift = 0
+    while True:
+        byte = data[offset]
+        offset += 1
+        value |= (byte & 0x7F) << shift
+        if not byte & 0x80:
+            return value, offset
+        shift += 7
+
+
+def patch_dex_focus_preview_restart(data):
+    """Do not restart the whole preview session after tap-to-focus.
+
+    fg.b2.i() applies the AF/AE regions and AF mode, then calls cm.d4.h0(),
+    which reconfigures the complete CamX session.  ab.e1.f(false) already
+    commits the new capture request, so on the OP9 HAL that restart only
+    tears down and recreates the SAT pipeline, stalling the preview ~1.5 s.
+
+    classes4.dex cannot be rebuilt with this smali version (it fails on an
+    unrelated invoke-custom in t0$b$a), so replace the invoke-virtual with
+    three nops in the bytecode and refresh the dex checksum and signature.
+    """
+    data = bytearray(data)
+    if data[:4] != b"dex\n":
+        raise SystemExit("classes4.dex: not a dex file")
+    (string_size, string_off, _type_size, type_off, _proto_size, _proto_off,
+     _field_size, _field_off, method_size, method_off,
+     class_size, class_off) = struct.unpack_from("<12I", data, 56)
+
+    def string(index):
+        offset = struct.unpack_from("<I", data, string_off + 4 * index)[0]
+        _size, offset = _dex_uleb128(data, offset)
+        return data[offset:data.index(0, offset)].decode("utf-8", "replace")
+
+    def type_name(index):
+        return string(struct.unpack_from("<I", data, type_off + 4 * index)[0])
+
+    restart = None
+    preview_key = None
+    focus_method = None
+    for index in range(method_size):
+        class_idx, _proto_idx, name_idx = struct.unpack_from(
+            "<HHI", data, method_off + 8 * index)
+        name = string(name_idx)
+        if type_name(class_idx) == "Lcm/d4;" and name == "h0":
+            restart = index
+        elif type_name(class_idx) == "Lfg/a;" and name == "e":
+            preview_key = index
+        elif type_name(class_idx) == "Lfg/b2;" and name == "i":
+            focus_method = index
+    if restart is None:
+        raise SystemExit("classes4.dex: cm.d4.h0() not found")
+    if preview_key is None or focus_method is None:
+        raise SystemExit("classes4.dex: fg.a.e() or fg.b2.i() not found")
+
+    restarts = []
+    unit_parameters = []
+    for class_index in range(class_size):
+        base = class_off + 32 * class_index
+        class_data = struct.unpack_from("<I", data, base + 24)[0]
+        if not class_data:
+            continue
+        offset = class_data
+        static_fields, offset = _dex_uleb128(data, offset)
+        instance_fields, offset = _dex_uleb128(data, offset)
+        direct_methods, offset = _dex_uleb128(data, offset)
+        virtual_methods, offset = _dex_uleb128(data, offset)
+        for _ in range(static_fields + instance_fields):
+            _field, offset = _dex_uleb128(data, offset)
+            _access, offset = _dex_uleb128(data, offset)
+        for count in (direct_methods, virtual_methods):
+            method_index = 0
+            for _ in range(count):
+                diff, offset = _dex_uleb128(data, offset)
+                method_index += diff
+                _access, offset = _dex_uleb128(data, offset)
+                code_off, offset = _dex_uleb128(data, offset)
+                if not code_off:
+                    continue
+                insns_size = struct.unpack_from("<I", data, code_off + 12)[0]
+                code = code_off + 16
+                for unit in range(insns_size - 2):
+                    opcode = data[code + 2 * unit]
+                    target = struct.unpack_from("<H", data, code + 2 * unit + 2)[0]
+                    if opcode == 0x6E and target == restart:
+                        restarts.append(code + 2 * unit)
+                    elif (method_index == focus_method and opcode == 0x72 and
+                            target == preview_key):
+                        unit_parameters.append(code + 2 * unit)
+    if len(restarts) != 1:
+        raise SystemExit(f"classes4.dex: expected 1 cm.d4.h0() call, found {len(restarts)}")
+    if len(unit_parameters) != 5:
+        raise SystemExit(
+            f"classes4.dex: expected 5 Unit-SDK focus parameters, found {len(unit_parameters)}")
+
+    for start in restarts + unit_parameters:
+        data[start:start + 6] = b"\x00" * 6
+    data[12:32] = hashlib.sha1(data[32:]).digest()
+    struct.pack_into("<I", data, 8, zlib.adler32(bytes(data[12:])) & 0xFFFFFFFF)
+    return bytes(data)
 
 
 def patch_smali_aps(text):
@@ -481,7 +597,8 @@ def patch_apk(source, target, baksmali, smali, zipalign):
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp = pathlib.Path(tmp_dir)
 
-        dex_targets = ["classes.dex", "classes2.dex", "classes3.dex", "classes5.dex", "classes6.dex", "classes7.dex", "classes33.dex"]
+        dex_targets = ["classes.dex", "classes2.dex", "classes3.dex", "classes4.dex",
+                       "classes5.dex", "classes6.dex", "classes7.dex", "classes33.dex"]
 
         # Extract all needed dex files
         with zipfile.ZipFile(source) as z:
@@ -537,7 +654,11 @@ def patch_apk(source, target, baksmali, smali, zipalign):
                         str(tmp / "smali_classes3"), "-o", str(tmp / "classes3.dex")],
                        check=True)
 
-        # 4. Patch classes5.dex
+        # 4. Patch classes4.dex in place: this smali build cannot reassemble it.
+        focus_dex = tmp / "classes4.dex"
+        focus_dex.write_bytes(patch_dex_focus_preview_restart(focus_dex.read_bytes()))
+
+        # 5. Patch classes5.dex
         subprocess.run(["java", "-jar", str(baksmali), "d", "-j", threads,
                         str(tmp / "classes5.dex"), "-o", str(tmp / "smali_classes5")],
                        check=True)
@@ -608,6 +729,8 @@ def patch_apk(source, target, baksmali, smali, zipalign):
                     zout.writestr(item, (tmp / item.filename).read_bytes(), compress_type=zipfile.ZIP_STORED)
                 else:
                     data = zin.read(item.filename)
+                    if item.filename.endswith(".so"):
+                        data = elf_align.align(data)
                     zout.writestr(item, data, compress_type=item.compress_type)
 
         # Align uncompressed entries: 16KB alignment for .so (Android 15+ 16KB page agnostic)

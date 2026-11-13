@@ -46,6 +46,12 @@ Verified on OnePlus 9 (`LE2111` / `LE2115`), **SELinux Enforcing**, crDroid 16 /
 2. Open **KernelSU Next Manager** → **Modules** → **Install**, select the ZIP, and **Reboot**.
 3. Open **Oplus Camera** and grant its runtime permissions.
 
+### Automatic Updates
+The module declares `updateJson` in `module.prop`, pointing at
+`https://github.com/ket0x4/oxygen-camera/releases/latest/download/update.json`.
+KernelSU Next, APatch and Magisk read that manifest and offer new releases from
+the module card; the manifest names the matching ZIP and the `CHANGELOG.md`.
+
 ### App Profile Visibility & Diagnostics
 - **Automatic Visibility**: After boot, `service.sh` (`ksu-visibility`) automatically turns **Umount modules OFF** for `com.oplus.camera` and your default launcher (without granting root), and restores both profiles if the module is disabled or removed.
 - **Manual Fallback**: If your KernelSU build does not expose the profile ioctl interface, open **KernelSU Next → App Profile → Oplus Camera → Custom → Umount modules: OFF** (keep Root OFF).
@@ -82,11 +88,11 @@ This downloads and verifies (by SHA-256) the pinned inputs, configs, test fixtur
 python3 scripts/build.py
 ```
 `build.py` automatically:
-1. Patches `OplusCamera.apk` ([scripts/patch_apk.py](scripts/patch_apk.py)), 16KB-page-aligns native `.so` libraries, and signs with the AOSP platform test key.
+1. Patches `OplusCamera.apk` ([scripts/patch_apk.py](scripts/patch_apk.py)), raises every 64-bit `PT_LOAD` segment to 16 KB alignment (APK and payload), enforces 16 KB offsets for the APK's uncompressed `.so` entries, and signs with the AOSP platform test key.
 2. Patches `com.oplus.camera.unit.sdk.jar` ([scripts/patch_sdk.py](scripts/patch_sdk.py)) for client package injection, 10-bit HEIC, and DNG `BlackLevel` / `BaselineExposure` normalization.
 3. Patches `camera.qcom.so` ([scripts/patch_hal.py](scripts/patch_hal.py)) and `/odm/lib64` algorithm/override libraries ([scripts/patch_algo.py](scripts/patch_algo.py)).
 4. Builds `liboplus-uah-client.so` ([native/uah-client/build.sh](native/uah-client/build.sh)) and bundles `ksu-visibility`.
-5. Outputs `build/OplusCamera-OP9-<version>.zip` and its `.sha256` checksum.
+5. Outputs `build/OplusCamera-OP9-<version>.zip`, its `.sha256` checksum, and `build/update.json` for in-place updates. Pass `--update-tag v<version>` to make the manifest point at the matching release.
 
 ### 4. Run Tests & Audit Artifact
 ```bash

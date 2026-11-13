@@ -70,11 +70,18 @@ jobs:
 
       - name: Build module
         run: |
+          version=$(sed -n 's/^version=//p' module/module.prop)
+          tag="v$version-build$GITHUB_RUN_NUMBER"
+          if [ "$GITHUB_REF" = refs/heads/cam4 ]; then
+            update_url="https://github.com/$GITHUB_REPOSITORY/releases/download/cam4-update/update.json"
+          else
+            update_url="https://github.com/$GITHUB_REPOSITORY/releases/latest/download/update.json"
+          fi
           cd scripts
           python3 build.py --uah-client ../.cache/aox/liboplus-uah-client.so \
-            --visibility-cache ../build/visibility
+            --visibility-cache ../build/visibility \
+            --update-tag "$tag" --update-url "$update_url"
           cd ..
-          version=$(sed -n 's/^version=//p' module/module.prop)
           echo "VERSION=$version" >> "$GITHUB_ENV"
           echo "ZIP=OplusCamera-OP9-$version-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
           cat build/OplusCamera-OP9-*.zip.sha256
@@ -86,6 +93,7 @@ jobs:
           path: |
             build/OplusCamera-OP9-*.zip
             build/OplusCamera-OP9-*.zip.sha256
+            build/update.json
             !build/OplusCamera-OP9.zip
             !build/OplusCamera-OP9.zip.sha256
           if-no-files-found: error
@@ -118,11 +126,26 @@ jobs:
             echo "/data/adb/modules/ooscamera_op9/aox.log."
             echo
             echo "SHA-256: \`$(cut -d ' ' -f 1 build/OplusCamera-OP9-$VERSION.zip.sha256)\`"
+            echo
+            echo "The module updates itself through \`updateJson\`; KernelSU Next, APatch and"
+            echo "Magisk will offer this build automatically."
           } > release-notes.md
-          gh release create "$tag" \
-            "build/OplusCamera-OP9-$VERSION.zip" "build/OplusCamera-OP9-$VERSION.zip.sha256" \
-            --target "$GITHUB_SHA" --title "Oplus Camera $app (module $VERSION, build $GITHUB_RUN_NUMBER)" \
-            --notes-file release-notes.md --latest=$latest
+          if [ "$latest" = true ]; then
+            gh release create "$tag" \
+              "build/OplusCamera-OP9-$VERSION.zip" "build/OplusCamera-OP9-$VERSION.zip.sha256" \
+              "build/update.json" \
+              --target "$GITHUB_SHA" --title "Oplus Camera $app (module $VERSION, build $GITHUB_RUN_NUMBER)" \
+              --notes-file release-notes.md --latest=true
+          else
+            gh release create "$tag" \
+              "build/OplusCamera-OP9-$VERSION.zip" "build/OplusCamera-OP9-$VERSION.zip.sha256" \
+              --target "$GITHUB_SHA" --title "Oplus Camera $app (module $VERSION, build $GITHUB_RUN_NUMBER)" \
+              --notes-file release-notes.md --latest=false
+            gh release view cam4-update >/dev/null 2>&1 || \
+              gh release create cam4-update --title "Camera 4 update channel" \
+                --notes "Rolling update manifest for the Camera 4 module." --latest=false
+            gh release upload cam4-update build/update.json --clobber
+          fi
           for tag in $old; do
             gh release delete "$tag" --cleanup-tag --yes
           done

@@ -13,6 +13,7 @@ import tempfile
 import xml.etree.ElementTree as ET
 import zipfile
 
+import elf_align
 import patch_algo
 import patch_apk
 import patch_hal
@@ -20,6 +21,7 @@ import patch_sdk
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 AOX_MANIFEST = ROOT / "aox/manifest.json"
+REPOSITORY = "ket0x4/oxygen-camera"
 CAMERA_APK = "system_ext/priv-app/OplusCamera/OplusCamera.apk"
 FWK_JAR = "system/framework/oplus-fwk.jar"
 FWK_EXTRA = [b"Lcom/oplus/os/WaveformEffect$Builder;", b"Lcom/oplus/os/LinearmotorVibrator;",
@@ -80,7 +82,8 @@ def aox_target(stage, path):
 
 def check_apk_alignment(path):
     """The app maps its libraries straight from the APK: stored .so entries
-    must start on a page boundary, other stored entries on 4 bytes."""
+    must start on a 16 KB boundary and be 16 KB aligned inside the ELF,
+    other stored entries on 4 bytes."""
     with zipfile.ZipFile(path) as archive, path.open("rb") as handle:
         if archive.testzip():
             raise SystemExit("Camera APK contains a damaged ZIP entry")
@@ -90,7 +93,14 @@ def check_apk_alignment(path):
             handle.seek(entry.header_offset + 26)
             name, extra = struct.unpack("<HH", handle.read(4))
             offset = entry.header_offset + 30 + name + extra
-            if offset % (4096 if entry.filename.endswith(".so") else 4):
+            if entry.filename.endswith(".so"):
+                if offset % 16384:
+                    raise SystemExit(f"Camera APK entry is not 16 KB aligned: {entry.filename}")
+                value = elf_align.alignment(archive.read(entry.filename))
+                if value is not None and value < elf_align.ALIGN_16K:
+                    raise SystemExit(
+                        f"Camera APK library is not 16 KB aligned: {entry.filename} (0x{value:x})")
+            elif offset % 4:
                 raise SystemExit(f"Camera APK entry is not aligned: {entry.filename}")
 
 
@@ -147,7 +157,11 @@ def stage_aox(stage, cache, uah_client, apksigner="apksigner", zipalign="zipalig
                 patch_sdk.patch_jar(local, target, cache / "inputs/baksmali.jar", cache / "inputs/smali.jar")
                 digest = hashlib.sha256(target.read_bytes()).hexdigest()
             else:
-                shutil.copyfile(local, target)
+                data = local.read_bytes()
+                if entry["kind"] == "library":
+                    data = elf_align.align(data)
+                    digest = hashlib.sha256(data).hexdigest()
+                target.write_bytes(data)
             app.append(relative)
         else:
             # Libraries collected from the device win, except over the ones
@@ -176,6 +190,9 @@ def stage_aox(stage, cache, uah_client, apksigner="apksigner", zipalign="zipalig
             elif entry.get("patch") == "chi-override":
                 data = patch_algo.patch_chi_override(data)
                 digest = hashlib.sha256(data).hexdigest()
+            if entry["kind"] == "library":
+                data = elf_align.align(data)
+                digest = hashlib.sha256(data).hexdigest()
             target.write_bytes(data)
             lines.append("|".join([path, entry["install"], digest,
                                    ",".join(entry.get("replace_sha256", [])),
@@ -184,7 +201,7 @@ def stage_aox(stage, cache, uah_client, apksigner="apksigner", zipalign="zipalig
         if entry["kind"] == "library" and path.startswith(("odm/", "vendor/")):
             labels.append(relative)
     if uah_client:
-        data = uah_client.read_bytes()
+        data = elf_align.align(uah_client.read_bytes())
         needed = elf_needed(data)
         if UAH_CLIENT_MARKER not in data or not set(needed) <= {"libc.so", "libdl.so"}:
             raise SystemExit("Unexpected liboplus-uah-client build; use native/uah-client/build.sh")
@@ -257,10 +274,25 @@ def stage_aox(stage, cache, uah_client, apksigner="apksigner", zipalign="zipalig
         "edits": "aox/edits.txt, applied on the device at install time"}, indent=2) + "\n")
 
 
+def update_metadata(version, version_code, zip_name, tag=None):
+    if tag:
+        zip_url = f"https://github.com/{REPOSITORY}/releases/download/{tag}/{zip_name}"
+    else:
+        zip_url = f"https://github.com/{REPOSITORY}/releases/latest/download/{zip_name}"
+    return {
+        "version": version,
+        "versionCode": version_code,
+        "zipUrl": zip_url,
+        "changelog": f"https://raw.githubusercontent.com/{REPOSITORY}/main/CHANGELOG.md",
+    }
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--output-dir", type=pathlib.Path, default=ROOT / "build")
     parser.add_argument("--candidate-version", help="Explicit prerelease version for an unvalidated test module")
+    parser.add_argument("--update-tag", help="GitHub release tag used for the update.json zipUrl")
+    parser.add_argument("--update-url", help="updateJson= URL to write into the staged module.prop")
     parser.add_argument("--visibility-cache", type=pathlib.Path,
                         help="App profile helper from prepare_visibility.py")
     parser.add_argument("--camera-config", type=pathlib.Path, help="Device camera configuration override")
@@ -317,6 +349,15 @@ def main():
         (stage / "visibility-source.json").write_text(json.dumps(visibility, indent=2) + "\n")
         for name in ("service.sh", "uninstall.sh", "visibility.sh"):
             shutil.copyfile(ROOT / "module" / name, stage / name)
+    if args.update_url:
+        prop = stage / "module.prop"
+        prop.write_text(re.sub(r"(?m)^updateJson=.*$", "updateJson=" + args.update_url, prop.read_text()))
+    bad = elf_align.check_tree(stage)
+    if bad:
+        raise SystemExit(f"{len(bad)} staged libraries are still below 16 KB alignment")
+    total = sum(1 for path in stage.rglob("*.so")
+                if elf_align.alignment(path.read_bytes()) is not None)
+    print(f"16 KB aligned {total} staged ELF64 libraries")
     if args.candidate_version:
         prop = stage / "module.prop"
         text = re.sub(r"(?m)^version=.*$", "version=" + args.candidate_version, prop.read_text())
@@ -352,6 +393,8 @@ def main():
     latest.unlink(missing_ok=True)
     latest.symlink_to(output.name)
     latest.with_suffix(".zip.sha256").write_text(f"{digest}  {latest.name}\n")
+    update = update_metadata(version, int(properties["versionCode"]), output.name, args.update_tag)
+    (output_dir / "update.json").write_text(json.dumps(update, indent=2) + "\n")
     print(f"{output}: {output.stat().st_size} bytes")
 
 

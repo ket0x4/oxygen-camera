@@ -1,6 +1,7 @@
 id=ooscamera_op9
 name=Oplus Camera 7.013.11 — OnePlus 9 / 9 Pro
-version=2.3.4
-versionCode=2304
+version=2.3.6
+versionCode=2306
 author=varakumar02, ket0x4
 description=Oplus Camera 7.013.11 for OnePlus 9 / 9 Pro on Android 16 & 17, with multi-manager root support and full SDK 37 / SELinux compatibility.
+updateJson=https://github.com/ket0x4/oxygen-camera/releases/latest/download/update.json

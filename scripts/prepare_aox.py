@@ -87,6 +87,11 @@ def main():
 
     jobs = []
     for entry in manifest["files"]:
+        if entry.get("local"):  # shipped in this repository (taken from the stock ROM)
+            dest = cache_path(args.cache, entry)
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes((ROOT / entry["local"]).read_bytes())
+            continue
         paths = entry.get("parts") or ["proprietary/" + entry["path"]]
         jobs.append((cache_path(args.cache, entry), entry["sha256"],
                      [source_url(entry["source"], path) for path in paths], entry["path"]))
