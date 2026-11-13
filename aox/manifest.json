@@ -98,6 +98,7 @@
     },
     {
       "name": "oplus-fwk.jar",
+      "local": "aox/stock/inputs/oplus-fwk.jar",
       "sha256": "3c3afe6a985df2aac8431c118b12775084a3d91638376c15b1ab93bd1f7e5d05"
     },
     {

@@ -97,6 +97,14 @@ def main():
                      [source_url(entry["source"], path) for path in paths], entry["path"]))
     for entry in manifest["inputs"]:
         local_in = args.cache / "inputs" / entry["name"]
+        if entry.get("local"):
+            data = (ROOT / entry["local"]).read_bytes()
+            if hashlib.sha256(data).hexdigest() != entry["sha256"]:
+                raise SystemExit(f"Checksum mismatch: {entry['name']}")
+            if not local_in.exists() or local_in.read_bytes() != data:
+                local_in.parent.mkdir(parents=True, exist_ok=True)
+                local_in.write_bytes(data)
+            continue
         if local_in.exists() and hashlib.sha256(local_in.read_bytes()).hexdigest() == entry["sha256"]:
             continue
         url = entry.get("url") or source_url(entry["source"], entry["src"])

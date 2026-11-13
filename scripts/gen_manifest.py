@@ -173,7 +173,8 @@ def main():
         data = trees[source].read(path)
         inputs.append({"name": name, "source": source, "src": path,
                        "sha256": hashlib.sha256(data).hexdigest()})
-    inputs += [entry for entry in previous.get("inputs", []) if "url" in entry]
+    inputs += [entry for entry in previous.get("inputs", [])
+               if "url" in entry or "local" in entry]
 
     manifest = {
         "branch": "aox",
