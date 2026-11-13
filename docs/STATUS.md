@@ -69,7 +69,7 @@ SELinux: **Enforcing**
 ### Category F: Responsiveness
 - [x] **F1. Tap-to-Focus Latency** (`fg.b2.i` preview restart and Unit-SDK focus keys)
   - *Goal*: Focus on a tapped subject without rebuilding the camera session.
-  - *Status*: **VERIFIED** (`fg.b2.i` no longer sends FOCUS_MODE/AF_REGIONS/AE_REGIONS through the Unit SDK and no longer calls `ModeManager.restartPreview`; Camera2 AF/AE keys still move the lens. Tap-to-focus: 0 CamX pipeline recreations, preview steady at 19–20 fps, tap→autofocus ~16 ms, focus distance 23→30. See PROBLEMS_AND_FIXES.md 16.4).
+  - *Status*: **VERIFIED** (`fg.b2.i` no longer sends FOCUS_MODE/AF_REGIONS/AE_REGIONS through the Unit SDK and no longer calls `ModeManager.restartPreview`; Camera2 AF/AE keys still move the lens. Tap-to-focus: 0 CamX pipeline recreations, preview steady at 19–20 fps, tap→autofocus ~16 ms, focus distance 23→30. 1x→5x zoom: 0 recreations, 18–20 fps. See PROBLEMS_AND_FIXES.md 16.4).
 
 ---
 
@@ -105,7 +105,7 @@ SELinux: **Enforcing**
   1. In standard **TIME-LAPSE** (`fastVideo`), multi-camera SAT zoom (`0.6x`, `1x`, `2x`, `5x`) is fully active and working out of the box via `com.oplus.feature.fast.video.sat.support = 1` using `commonVideoSatHal` (`operation_mode = 33548`).
   2. Tapping the optional Hyperlapse EIS toggle (`pref_video_hyper_lapse_key`) switches the camera mode to `hyperlapseProVideo` (`operation_mode = 0x80a5`). On Android 17 / SDK 37, this triggers a fatal `NullPointerException` inside `android.hardware.camera2.marshal.impl.MarshalQueryableSize$MarshalerSize.marshal` because `APSSuperEISNode` attempts to pass proprietary Hyperlapse metadata tags where an `android.util.Size` object is null, subsequently crashing the GL renderer via Scudo pointer misalignment.
   3. Stock OnePlus 9 hardware only shipped with a single-point zoom table (`com.oplus.feature.hyper.lapse.zoom.list = 0.6`) without multi-lens calibration tables for Hyperlapse mode.
-- **Resolution**: TIME-LAPSE mode already provides full SAT multi-camera zoom across `0.6x`, `1x`, `2x`, and `5x` lenses. The Hyperlapse toggle limitation on Android 17 is documented and standard Time-Lapse SAT zoom is verified operational.
+- **Resolution**: TIME-LAPSE mode already provides full SAT multi-camera zoom across `0.6x`, `1x`, `2x`, and `5x` lenses. On Android 17 the crashing EIS toggle is hidden by `sdkge|37|tag|…|com.oplus.feature.hyper.lapse.support|Byte|1|*|0`; standard Time-Lapse SAT zoom remains operational, and Android 16 keeps the toggle.
 
 ### B1. Master Mode — Unified Format Menu (`JPG` / `RAW` / `RAW+`)
 - **Root Cause & Resolution**:

@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.3.8
+
+- On Android 17 the crashing Hyperlapse EIS toggle is hidden with a new
+  SDK-gated edit (`sdkge|37|…com.oplus.feature.hyper.lapse.support=0`).
+  Time-Lapse keeps its full SAT zoom; Android 16 keeps the toggle.
+- Docs reconciled with 2.3.7 reality: AI Highlight/Ultra Night Video is
+  enabled with the 64-bit libs, aperture blur works through
+  `VideoBlurTexturePreview`, and the tap-to-focus/zoom measurements are
+  recorded.
+- Documented the remaining non-fatal vendor-tag mismatch: the 7.x app probes
+  Oplus tags the stock OP9 HAL does not define, while focus/exposure still use
+  the Camera2 AF/AE keys.
+
 ## 2.3.7
 
 - Installer output is now structured: a device/ROM/module banner, phase

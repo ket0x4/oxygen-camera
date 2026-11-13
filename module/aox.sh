@@ -15,6 +15,12 @@ AOX_DIR=aox
 AOX_ROOT=${AOX_ROOT:-}
 # lemonade (OnePlus 9) or lemonadep (9 Pro); customize.sh sets it.
 AOX_DEVICE=${AOX_DEVICE:-}
+# Android SDK level; customize.sh sets it, host tests may pass AOX_SDK.
+AOX_SDK=${AOX_SDK:-}
+if [ -z "$AOX_SDK" ]; then
+    AOX_SDK=$(getprop ro.build.version.sdk 2>/dev/null || echo 0)
+    case "$AOX_SDK" in ''|*[!0-9]*) AOX_SDK=0 ;; esac
+fi
 # Where a running copy of this module has its image mounted, and its
 # directory. What that copy overlays hides the ROM's own file, so "the device
 # already has it" would be this module's doing: such files are provided again.
@@ -331,9 +337,11 @@ aox_apply() {
 }
 
 aox_apply_edits() {
-    # "only|device|" lines apply to that phone alone.
-    awk -F '|' -v device="$AOX_DEVICE" '
+    # "only|device|" lines apply to that phone alone; "sdkge|N|" lines apply
+    # from Android SDK N upwards.
+    awk -F '|' -v device="$AOX_DEVICE" -v sdk="$AOX_SDK" '
         $1 == "only" { if ($2 != device) next; sub(/^only\|[^|]*\|/, "") }
+        $1 == "sdkge" { if (sdk + 0 < $2 + 0) next; sub(/^sdkge\|[^|]*\|/, "") }
         { print }' "$MODPATH/$AOX_DIR/edits.txt" > "$MODPATH/$AOX_DIR/edits.device"
     while IFS='|' read -r op path a b c d e; do
         case "$op" in ''|'#'*) continue ;; esac

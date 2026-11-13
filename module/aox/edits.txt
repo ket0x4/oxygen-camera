@@ -10,6 +10,7 @@
 # block|file|id[,id...]                        exact blocks in blocks/, all or none
 # audiocap|-|encoder|maxBitRate                media profiles AudioEncoderCap
 # only|device|<edit>                           lemonade (9) or lemonadep (9 Pro) only
+# sdkge|N|<edit>                               Android SDK N and newer only
 
 # oplus_camera_config: every tag that differs from the stock file. The 7.x
 # feature tags, 4K 60fps, 4K focus tracking, Text Scanner, recorder surface
@@ -20,6 +21,8 @@ tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.video.4k60fps.ul
 tag|odm/etc/camera/config/oplus_camera_config|com.oplus.long.exposure.no.wide|Byte|1|*|0
 tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.video.super.eis.wide.support|Byte|1|*|1
 tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.video.super.eis.all.fps.support|Byte|1|*|1
+# Android 17: the 7.x Hyperlapse EIS toggle crashes in MarshalQueryableSize; hide it.
+sdkge|37|tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.hyper.lapse.support|Byte|1|*|0
 tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.professional.raw.support|Byte|1|*|0
 tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.professional.super.raw.support|Byte|1|*|1
 tag|odm/etc/camera/config/oplus_camera_config|com.oplus.feature.raw.camera.type.support|String|3|*|camera_main,camera_ultra_wide,camera_tele

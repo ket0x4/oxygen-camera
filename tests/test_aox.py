@@ -133,6 +133,20 @@ class Installer(unittest.TestCase):
         media = self.modpath / "aox/media" / MEDIA
         self.assertEqual(media.read_bytes(), (FIXTURES / "head" / MEDIA).read_bytes())
 
+    def test_hyperlapse_hidden_on_android_17(self):
+        self.fixtures()
+        self.install(AOX_SDK="37")
+        data = staged(self.modpath, "odm/etc/camera/config/oplus_camera_config").read_text()
+        tags = {e["VendorTag"]: e for e in json.loads(data, strict=False) if "VendorTag" in e}
+        self.assertEqual(tags["com.oplus.feature.hyper.lapse.support"]["Value"], "0")
+
+    def test_hyperlapse_kept_before_android_17(self):
+        self.fixtures()
+        self.install(AOX_SDK="36")
+        data = staged(self.modpath, "odm/etc/camera/config/oplus_camera_config").read_text()
+        tags = {e["VendorTag"]: e for e in json.loads(data, strict=False) if "VendorTag" in e}
+        self.assertEqual(tags["com.oplus.feature.hyper.lapse.support"]["Value"], "1")
+
     def test_pro_base_configs_become_pro_head(self):
         self.fixtures(PRO_FIXTURES)
         self.install(device="lemonadep")

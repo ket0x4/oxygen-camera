@@ -640,6 +640,10 @@ In Hasselblad XPan mode, the UI was locked to the 45mm main lens. The 30mm Ultra
 4. **Tap-to-Focus Preview Restart**:
    - `fg.b2.i()` sent `FOCUS_MODE`, `AF_REGIONS` and `AE_REGIONS` through the Unit SDK and then called `cm.d4.h0()`. That changed the APS preview decision (3HDR sensor mode), so `ProducerImpl.startPreview()` made CamX rebuild `MultiCameraRealtime0` (~1.5 s) on every tap.
    - [scripts/patch_apk.py](file:///home/ket/Projects/ooscam/scripts/patch_apk.py) patches `classes4.dex` in place (this smali build cannot reassemble it): the five Unit-SDK `fg.a.e(PreviewKey, …)` calls in `fg.b2.i()` and the `cm.d4.h0()` invoke are replaced with NOPs, then the dex checksum and SHA-1 are refreshed. The Camera2 `CONTROL_AF_MODE` / `AF_REGIONS` / `AE_REGIONS` keys remain, so the lens still focuses.
+   - The Unit SDK exposes no separate "apply request" API; `startPreview()` is its `setRepeatingBurst` path. With the APS decision stable, the remaining calls are cheap and do not rebuild the pipeline.
+5. **Vendor tag set mismatch (documented limitation)**:
+   - The stock OP9 camera provider advertises 789 vendor tags. The 7.x app probes newer Oplus names (`focus.touch.xy`, `sensor.mode`, `filter.mode`, …) that the 5.x-era HAL never defined, so the framework logs `VendorTagDescriptor` lookup failures and CamX logs `ReadAfCustomData()` failures every frame.
+   - These are non-fatal: focus and exposure still run through the Camera2 keys (`CONTROL_AF_MODE`, `AF_REGIONS`, `AE_REGIONS`), and tap focus, AE/AF lock and 1x→5x zoom are verified. Registering the missing tags would require rebuilding the OPlus HAL/provider vendor-tag table, which this module does not rewrite.
 
 ### Live Verification
 - `dumpsys package com.oplus.camera` confirms `arm64: [status=speed] [reason=cmdline]`.
@@ -649,6 +653,7 @@ In Hasselblad XPan mode, the UI was locked to the 45mm main lens. The 30mm Ultra
 - Viewfinder rendering and mode switching are instantaneous and silky smooth.
 - `python3 scripts/elf_align.py check build/module` reports 0 libraries below 16 KB; `build.check_apk_alignment` enforces 16 KB ELF and ZIP alignment.
 - Tap-to-focus: 0 CamX pipeline recreations per tap, preview steady at 19–20 fps, tap→autofocus ~16 ms, lens focus distance moved 23→30.
+- Zoom: 1x→2x and 1x→5x transitions at 18–20 fps with 0 pipeline recreations.
 
 ---
 
