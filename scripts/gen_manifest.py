@@ -114,9 +114,14 @@ def main():
 
     camera = trees["camera"]
     parts = sorted(path for path in camera.files if path.startswith("proprietary/" + APK + ".part"))
-    data = b"".join(camera.read(path) for path in parts)
-    files.append({"path": APK, "source": "camera", "parts": parts, "group": "app",
-                  "kind": "apk", **describe(data, None)})
+    if parts:
+        data = b"".join(camera.read(path) for path in parts)
+        files.append({"path": APK, "source": "camera", "parts": parts, "group": "app",
+                      "kind": "apk", **describe(data, None)})
+    else:
+        # The APK is not split into the camera tree; keep the pinned entry
+        # (which points at a release asset) instead of an empty-file hash.
+        files.append(old[APK])
     for source in sorted(camera.files):
         path = source.removeprefix("proprietary/")
         if path == source or source in parts or path.startswith(APP_SKIP):

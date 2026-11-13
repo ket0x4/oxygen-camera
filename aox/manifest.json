@@ -117,7 +117,7 @@
   "files": [
     {
       "path": "system_ext/priv-app/OplusCamera/OplusCamera.apk",
-      "source": "camera",
+      "url": "https://github.com/ket0x4/oxygen-camera/releases/download/aox-sources/OplusCamera.apk",
       "group": "app",
       "kind": "apk",
       "patch": "raw-capture",

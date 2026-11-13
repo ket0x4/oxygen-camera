@@ -92,9 +92,12 @@ def main():
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_bytes((ROOT / entry["local"]).read_bytes())
             continue
-        paths = entry.get("parts") or ["proprietary/" + entry["path"]]
-        jobs.append((cache_path(args.cache, entry), entry["sha256"],
-                     [source_url(entry["source"], path) for path in paths], entry["path"]))
+        if entry.get("url"):
+            urls = [entry["url"]]
+        else:
+            paths = entry.get("parts") or ["proprietary/" + entry["path"]]
+            urls = [source_url(entry["source"], path) for path in paths]
+        jobs.append((cache_path(args.cache, entry), entry["sha256"], urls, entry["path"]))
     for entry in manifest["inputs"]:
         local_in = args.cache / "inputs" / entry["name"]
         if entry.get("local"):
