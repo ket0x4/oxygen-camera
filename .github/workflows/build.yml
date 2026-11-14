@@ -1,11 +1,13 @@
 name: Build module
 
 # Every push to main (OplusCamera 7.x) or cam4 (OplusCamera 4.x), and manual
-# runs, builds a KernelSU Next module ZIP from the pinned aox trees, uploads it
-# as a workflow artifact and publishes it as a GitHub release. The main
-# release is always the one marked latest. Each camera keeps one
-# release: publishing a build removes that camera's earlier ones and their
-# tags. Pull requests only build and test.
+# runs, builds a KernelSU Next module ZIP from the pinned aox trees and uploads
+# it as a workflow artifact. A release is published only when module.prop's
+# versionCode increases; docs and CI-only pushes still build but leave the
+# current release and its static update manifest alone. The main release is
+# always the one marked latest. Each camera keeps one release: publishing a
+# build removes that camera's earlier ones and their tags. Pull requests only
+# build and test.
 #
 # The camera APK is signed with the public AOSP platform test key.
 
@@ -67,7 +69,14 @@ jobs:
           python3 -m pytest -q tests
 
       - name: Build the app profile helper
-        run: python3 scripts/prepare_visibility.py --output-dir build/visibility
+        run: |
+          ndk=$(ls -d "$ANDROID_HOME"/ndk/* 2>/dev/null | sort -V | tail -n 1)
+          if [ -z "$ndk" ]; then
+            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;27.2.12479018" >/dev/null
+            ndk="$ANDROID_HOME/ndk/27.2.12479018"
+          fi
+          python3 scripts/prepare_visibility.py --ndk "$ndk" --output-dir build/visibility
+          python3 scripts/elf_align.py native build/visibility/ksu-visibility
 
       - name: Build module
         run: |
@@ -87,6 +96,28 @@ jobs:
           echo "ZIP=OplusCamera-OP9-$version-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
           cat build/OplusCamera-OP9-*.zip.sha256
 
+      - name: Decide whether to release
+        id: release
+        run: |
+          current=$(sed -n 's/^versionCode=//p' module/module.prop)
+          if [ "$GITHUB_REF" = refs/heads/cam4 ]; then
+            previous=$(git show HEAD^:module/module.prop 2>/dev/null | sed -n 's/^versionCode=//p')
+          else
+            previous=$(python3 -c 'import json; print(json.load(open("update.json"))["versionCode"])' 2>/dev/null || true)
+          fi
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ] || [ -z "$previous" ]; then
+            publish=true
+          elif [ "$current" -gt "$previous" ]; then
+            publish=true
+          elif [ "$current" -eq "$previous" ]; then
+            publish=false
+          else
+            echo "versionCode decreased: $previous -> $current" >&2
+            exit 1
+          fi
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+          echo "versionCode $previous -> $current: publish=$publish"
+
       - name: Upload module
         uses: actions/upload-artifact@v4
         with:
@@ -101,7 +132,7 @@ jobs:
           retention-days: 30
 
       - name: Publish release
-        if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/cam4')
+        if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/cam4') && steps.release.outputs.publish == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -155,7 +186,7 @@ jobs:
           [ -z "$newest" ] || gh release edit "$newest" --latest
 
       - name: Refresh the static update manifest
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && steps.release.outputs.publish == 'true'
         run: |
           cp build/update.json update.json
           git config user.name "github-actions[bot]"

@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.3.11
+
+- Payload libraries are stripped of debug/unneeded sections when that makes
+  them smaller: `libnightvision`, `libaisd`, `libimgClarityEvaluate` and
+  `libSuperTextWrapper` lose 25 MiB uncompressed (~5.4 MiB of the ZIP). Their
+  dynamic symbol tables are unchanged and the camera maps them normally.
+- `liboplus-uah-client.so` and `ksu-visibility` now link with a 16 KB common
+  page size, so their `PT_GNU_RELRO` ends align; the build and CI check both
+  `p_align` and RELRO. Prebuilt vendor/APK libraries still carry their original
+  4 KB RELRO layout (60 payload + 21 APK libs) and are reported as a known
+  limit.
+- CI publishes a release only when `module.prop` `versionCode` increases.
+  Docs/CI-only pushes still build and upload an artifact, but leave the current
+  release and static `update.json` untouched; a lower versionCode fails.
+
 ## 2.3.10
 
 - Move the update manifest into the repository (`update.json` on `main`) and

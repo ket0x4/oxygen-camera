@@ -44,7 +44,8 @@ def main():
                 print(target)
                 return
         raise SystemExit(f"No Android NDK at {args.ndk} (pass --ndk)")
-    flags = ["-O2", "-Wall", "-Wextra", "-Werror", f"-ffile-prefix-map={ROOT}=/src"]
+    flags = ["-O2", "-Wall", "-Wextra", "-Werror", f"-ffile-prefix-map={ROOT}=/src",
+             "-Wl,-z,max-page-size=16384", "-Wl,-z,relro", "-Wl,-z,common-page-size=16384"]
     subprocess.run([str(compiler), *flags, "-Wl,--build-id=none", str(SOURCE), "-o", str(target)], check=True)
     subprocess.run([str(toolchain / "llvm-strip"), "--strip-all", str(target)], check=True)
     manifest = {

@@ -13,6 +13,7 @@ import struct
 import sys
 
 ALIGN_16K = 0x4000
+GNU_RELRO = 0x6474E552
 
 
 def _elf64_program_headers(data):
@@ -42,6 +43,37 @@ def alignment(data):
             continue
         values.append(struct.unpack_from(endian + "Q", data, offset + 0x30)[0])
     return min(values) if values else None
+
+
+def relro_end(data):
+    """Virtual end of PT_GNU_RELRO, or None for non-ELF64/32-bit."""
+    header = _elf64_program_headers(data)
+    if header is None:
+        return None
+    endian, phoff, phentsize, phnum = header
+    for index in range(phnum):
+        offset = phoff + index * phentsize
+        if struct.unpack_from(endian + "I", data, offset)[0] == GNU_RELRO:
+            vaddr = struct.unpack_from(endian + "Q", data, offset + 0x10)[0]
+            memsz = struct.unpack_from(endian + "Q", data, offset + 0x28)[0]
+            return vaddr + memsz
+    return None
+
+
+def check_relro(data):
+    """RELRO end modulo 16 KB; 0 is compliant, None means no RELRO."""
+    end = relro_end(data)
+    return None if end is None else end % ALIGN_16K
+
+
+def check_tree_relro(root):
+    """Return [(path, remainder)] for ELF64 libraries with a misaligned RELRO end."""
+    bad = []
+    for path in pathlib.Path(root).rglob("*.so"):
+        value = check_relro(path.read_bytes())
+        if value:
+            bad.append((str(path), value))
+    return bad
 
 
 def align(data):
@@ -92,9 +124,26 @@ def check_tree(root):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3 or sys.argv[1] not in ("check", "align"):
-        raise SystemExit("Usage: elf_align.py {check|align} <directory-or-file>")
+    if len(sys.argv) != 3 or sys.argv[1] not in ("check", "align", "relro", "native"):
+        raise SystemExit("Usage: elf_align.py {check|align|relro|native} <directory-or-file>")
     target = pathlib.Path(sys.argv[2])
+    if sys.argv[1] == "native":
+        data = target.read_bytes()
+        value = alignment(data)
+        relro = check_relro(data)
+        ok = (value is None or value >= ALIGN_16K) and (relro is None or relro == 0)
+        print(f"{target}: p_align={hex(value) if value else 'n/a'} relro_end_mod={relro}")
+        raise SystemExit(0 if ok else 1)
+    if sys.argv[1] == "relro":
+        if target.is_file():
+            value = check_relro(target.read_bytes())
+            print(f"{target}: relro_end_mod={value}")
+            raise SystemExit(0 if not value else 1)
+        bad = check_tree_relro(target)
+        print(f"{len(bad)} ELF64 libraries have a non-16 KB RELRO end")
+        for path, value in bad[:20]:
+            print(f"  {path}: +0x{value:x}")
+        raise SystemExit(0)
     if target.is_file():
         value = alignment(target.read_bytes())
         if sys.argv[1] == "check":

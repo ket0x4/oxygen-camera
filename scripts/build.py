@@ -80,6 +80,47 @@ def aox_target(stage, path):
     return stage / path if parts[0] == "system" else stage / "system" / path
 
 
+def strip_library(data, strip_tool):
+    """Drop debug/unneeded symbols, but only when it actually makes the
+    library smaller (some vendor libs are already stripped)."""
+    if not strip_tool:
+        return data
+    with tempfile.TemporaryDirectory() as tmp:
+        source = pathlib.Path(tmp) / "in.so"
+        target = pathlib.Path(tmp) / "out.so"
+        source.write_bytes(data)
+        try:
+            result = subprocess.run([strip_tool, "--strip-unneeded", "-o", str(target), str(source)],
+                                    capture_output=True)
+        except OSError:
+            return data
+        if result.returncode == 0 and target.exists():
+            stripped = target.read_bytes()
+            if len(stripped) + 65536 < len(data):
+                return stripped
+    return data
+
+
+def check_native_alignment(path, label):
+    data = path.read_bytes()
+    value = elf_align.alignment(data)
+    if value is not None and value < elf_align.ALIGN_16K:
+        raise SystemExit(f"{label} is not 16 KB aligned (p_align 0x{value:x})")
+    relro = elf_align.check_relro(data)
+    if relro:
+        raise SystemExit(f"{label} has a non-16 KB RELRO end (+0x{relro:x}); "
+                         "rebuild it with -Wl,-z,common-page-size=16384")
+
+
+def report_apk_relro(path):
+    with zipfile.ZipFile(path) as archive:
+        bad = [entry.filename for entry in archive.infolist()
+               if entry.filename.endswith(".so") and elf_align.check_relro(archive.read(entry.filename))]
+    if bad:
+        print(f"16 KB RELRO: {len(bad)} prebuilt APK libraries retain a 4 KB layout")
+    return bad
+
+
 def check_apk_alignment(path):
     """The app maps its libraries straight from the APK: stored .so entries
     must start on a 16 KB boundary and be 16 KB aligned inside the ELF,
@@ -118,7 +159,7 @@ def sign_apk(source, target, keys, apksigner):
     check_apk_alignment(target)
 
 
-def stage_aox(stage, cache, uah_client, apksigner="apksigner", zipalign="zipalign"):
+def stage_aox(stage, cache, uah_client, apksigner="apksigner", zipalign="zipalign", strip_tool=None):
     """Stage the camera app, the aox libraries and the on-device edit data.
 
     The app set is copied as is and listed in aox/app.txt, so the installer
@@ -159,6 +200,7 @@ def stage_aox(stage, cache, uah_client, apksigner="apksigner", zipalign="zipalig
             else:
                 data = local.read_bytes()
                 if entry["kind"] == "library":
+                    data = strip_library(data, strip_tool)
                     data = elf_align.align(data)
                     digest = hashlib.sha256(data).hexdigest()
                 target.write_bytes(data)
@@ -191,6 +233,7 @@ def stage_aox(stage, cache, uah_client, apksigner="apksigner", zipalign="zipalig
                 data = patch_algo.patch_chi_override(data)
                 digest = hashlib.sha256(data).hexdigest()
             if entry["kind"] == "library":
+                data = strip_library(data, strip_tool)
                 data = elf_align.align(data)
                 digest = hashlib.sha256(data).hexdigest()
             target.write_bytes(data)
@@ -201,7 +244,8 @@ def stage_aox(stage, cache, uah_client, apksigner="apksigner", zipalign="zipalig
         if entry["kind"] == "library" and path.startswith(("odm/", "vendor/")):
             labels.append(relative)
     if uah_client:
-        data = elf_align.align(uah_client.read_bytes())
+        data = strip_library(uah_client.read_bytes(), strip_tool)
+        data = elf_align.align(data)
         needed = elf_needed(data)
         if UAH_CLIENT_MARKER not in data or not set(needed) <= {"libc.so", "libdl.so"}:
             raise SystemExit("Unexpected liboplus-uah-client build; use native/uah-client/build.sh")
@@ -304,7 +348,12 @@ def main():
                         help="apksigner from Android SDK Build Tools")
     parser.add_argument("--zipalign", default=find_tool("zipalign"),
                         help="zipalign from Android SDK Build Tools")
+    parser.add_argument("--strip-tool", help="llvm-strip used to drop debug sections from payload libraries")
     args = parser.parse_args()
+    strip_tool = args.strip_tool or find_tool("llvm-strip")
+    if strip_tool and not (pathlib.Path(strip_tool).is_file() or shutil.which(strip_tool)):
+        print("llvm-strip not found; payload libraries will not be stripped")
+        strip_tool = None
     if args.uah_client is None:
         default_uah = args.aox_cache / "liboplus-uah-client.so"
         if not default_uah.exists() and shutil.which("clang") and shutil.which("ld.lld"):
@@ -332,7 +381,7 @@ def main():
         shutil.copyfile(args.camera_config, target)
 
     # After every other payload: anything the module already ships wins.
-    stage_aox(stage, args.aox_cache, args.uah_client, args.apksigner, args.zipalign)
+    stage_aox(stage, args.aox_cache, args.uah_client, args.apksigner, args.zipalign, strip_tool)
 
     for name in ["module.prop", "customize.sh", "post-fs-data.sh", "action.sh",
                  "mount-camera.sh", "boot-completed.sh", "skip_mount"]:
@@ -358,6 +407,15 @@ def main():
     total = sum(1 for path in stage.rglob("*.so")
                 if elf_align.alignment(path.read_bytes()) is not None)
     print(f"16 KB aligned {total} staged ELF64 libraries")
+    uah_target = aox_target(stage, UAH_CLIENT_PATH)
+    if uah_target.exists():
+        check_native_alignment(uah_target, "liboplus-uah-client")
+    apk_target = aox_target(stage, CAMERA_APK)
+    if apk_target.exists():
+        report_apk_relro(apk_target)
+    relro = elf_align.check_tree_relro(stage)
+    if relro:
+        print(f"16 KB RELRO: {len(relro)} prebuilt payload libraries retain a 4 KB layout")
     if args.candidate_version:
         prop = stage / "module.prop"
         text = re.sub(r"(?m)^version=.*$", "version=" + args.candidate_version, prop.read_text())

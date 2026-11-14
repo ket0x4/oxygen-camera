@@ -2,7 +2,7 @@
 
 [![Release](https://img.shields.io/github/v/release/ket0x4/oxygen-camera?color=blue&label=Latest%20Release)](https://github.com/ket0x4/oxygen-camera/releases/latest)
 [![Android](https://img.shields.io/badge/Android-16%20%7C%2017-brightgreen)](https://github.com/ket0x4/oxygen-camera)
-[![16 KB pages](https://img.shields.io/badge/16%20KB%20pages-ready-informational)](https://github.com/ket0x4/oxygen-camera)
+[![16 KB aligned](https://img.shields.io/badge/16%20KB%20aligned-informational)](https://github.com/ket0x4/oxygen-camera)
 [![License](https://img.shields.io/badge/License-GPL%20v3-orange)](LICENSE)
 
 OplusCamera **7.013.11** (ColorOS 16) for the OnePlus 9 / 9 Pro on Android 16–17 custom ROMs. A standalone KernelSU Next / APatch / Magisk module that builds its own read-only EROFS camera image, mounts it through OverlayFS, and configures App Profile visibility automatically. No Mountify.
@@ -24,7 +24,7 @@ OplusCamera **7.013.11** (ColorOS 16) for the OnePlus 9 / 9 Pro on Android 16–
 | AI | Highlight video, Ultra Night Video |
 | Extras | 10-bit HEIC, XPan, Long Exposure, Panorama, Time-Lapse, Dual-View, Slo-mo |
 
-**Known limits:** front SuperNight is HAL-limited on the IMX471; Hyperlapse EIS is hidden on Android 17 (7.x SDK crash), while Time-Lapse keeps SAT zoom; wide SuperEIS at 4K is capped at 30 fps.
+**Known limits:** front SuperNight is HAL-limited on the IMX471; Hyperlapse EIS is hidden on Android 17 (7.x SDK crash), while Time-Lapse keeps SAT zoom; wide SuperEIS at 4K is capped at 30 fps; prebuilt vendor blobs keep their original 4 KB `PT_GNU_RELRO` ends (relinking would be needed for full Play 16 KB compliance).
 
 ## Requirements
 
@@ -48,9 +48,12 @@ python3 scripts/build.py --update-tag v<version>
 python3 -m unittest discover -s tests
 ```
 
-Needs Python 3.10+, Java 17+, Android build-tools, and clang/ld.lld. Pinned sources and
-hashes live in [`aox/manifest.json`](aox/manifest.json); `prepare_aox.py` restores the
-camera APK and firmware payload from the `aox-sources` release.
+Needs Python 3.10+, Java 17+, Android build-tools, and clang/ld.lld/llvm-strip.
+Pinned sources and hashes live in [`aox/manifest.json`](aox/manifest.json);
+`prepare_aox.py` restores the camera APK and firmware payload from the
+`aox-sources` release. The build strips debug sections when that shrinks a
+library and enforces 16 KB `p_align`/ZIP offsets; the native helpers are also
+checked for a 16 KB RELRO end.
 
 ## Logs
 

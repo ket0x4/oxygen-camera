@@ -92,7 +92,7 @@ def main():
             parser.error(f"Module archive missing: {archive}")
         adb("push", str(archive), "/data/local/tmp/OplusCamera-OP9.zip")
         result = root("/data/adb/ksud module install /data/local/tmp/OplusCamera-OP9.zip",
-                      check=False, timeout=240)
+                      check=False, timeout=900)
         print(result.stdout)
         if result.stderr:
             print(result.stderr)

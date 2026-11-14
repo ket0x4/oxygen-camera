@@ -41,6 +41,7 @@ done
 
 clang --target=$target -shared -nostdlib -fuse-ld=lld \
     -Wl,-soname,liboplus-uah-client.so -Wl,--hash-style=both -Wl,-z,max-page-size=16384 \
-    -Wl,-z,relro -Wl,-z,now -Wl,--no-undefined-version -Wl,--build-id=none \
+    -Wl,-z,relro -Wl,-z,common-page-size=16384 -Wl,-z,now \
+    -Wl,--no-undefined-version -Wl,--build-id=none \
     -o "$out" "$work/uah_client.o" -L"$work" -lc -ldl
 echo "$out"
