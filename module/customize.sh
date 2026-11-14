@@ -87,9 +87,10 @@ ui_print "> Preparing camera image"
 # shellcheck source=module/mount-camera.sh
 . "$MODPATH/mount-camera.sh"
 if ! camera_prepare_image; then
-    # Never leave installer mounts behind on failure.
+    # Never leave installer mounts or a partial replacement image behind.
     umount "$MODPATH/.camera-probe" 2>/dev/null
     umount "$MODPATH/.camera-image" 2>/dev/null
+    rm -f "$MODPATH/camera.img.new"
     cp "$MODPATH/aox.log" /data/local/tmp/ooscamera-install.log 2>/dev/null
     abort "Camera filesystem preparation failed; installation cancelled."
 fi

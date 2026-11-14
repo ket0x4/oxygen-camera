@@ -31,16 +31,22 @@ camera_fail() {
 
 camera_prepare_image() {
     image="$MODPATH/camera.img"
+    new_image="$MODPATH/camera.img.new"
     stage="$MODPATH/.camera-image"
+    rm -f "$new_image"
 
+    # Build beside the target image. Some managers run customize.sh against
+    # the installed module while its image is still loop-mounted; never
+    # reformat an image in place. The new file is renamed over camera.img
+    # after validation and is used on the next boot.
     # Prefer compressed EROFS when supported: ~60% smaller, faster reads, direct creation without rw loop.
     if [ -x /system/bin/mkfs.erofs ] && grep -qw erofs /proc/filesystems; then
         echo "Building compressed EROFS camera image..."
-        if /system/bin/mkfs.erofs -z lz4hc,level=9 -L OOSCamera "$image" "$MODPATH/system" >/dev/null 2>&1; then
-            chmod 0600 "$image"
-            chcon u:object_r:ksu_file:s0 "$image" 2>/dev/null || true
+        if /system/bin/mkfs.erofs -z lz4hc,level=9 -L OOSCamera "$new_image" "$MODPATH/system" >/dev/null 2>&1; then
+            chmod 0600 "$new_image"
+            chcon u:object_r:ksu_file:s0 "$new_image" 2>/dev/null || true
             mkdir -p "$stage" || return 1
-            if mount -t erofs -o loop,ro,nodev,nosuid,noatime "$image" "$stage"; then
+            if mount -t erofs -o loop,ro,nodev,nosuid,noatime "$new_image" "$stage"; then
                 camera_image_ok=1
                 mkdir -p "$MODPATH/.camera-probe" || camera_image_ok=0
                 while read -r relative target; do
@@ -60,13 +66,16 @@ EOF
                 umount "$stage" || return 1
                 rmdir "$stage" "$MODPATH/.camera-probe" 2>/dev/null || true
                 if [ "$camera_image_ok" = 1 ]; then
+                    mv "$new_image" "$image" || return 1
+                    chmod 0600 "$image"
+                    chcon u:object_r:ksu_file:s0 "$image" 2>/dev/null || true
                     rm -rf "$MODPATH/system"
                     return 0
                 fi
             fi
             umount "$MODPATH/.camera-probe" 2>/dev/null || true
             umount "$stage" 2>/dev/null || true
-            rm -f "$image"
+            rm -f "$new_image"
             rmdir "$stage" "$MODPATH/.camera-probe" 2>/dev/null || true
         fi
     fi
@@ -79,12 +88,12 @@ EOF
         echo 'Insufficient free storage to prepare the camera filesystem.'
         return 1
     fi
-    dd if=/dev/zero of="$image" bs=1024 count=0 seek="$image_kib" 2>/dev/null || { camera_fail "cannot create the image"; return 1; }
-    /system/bin/mkfs.ext4 -q -O ^has_journal -m 0 -L OOSCamera "$image" || { camera_fail "mkfs.ext4 failed"; return 1; }
-    chmod 0600 "$image"
-    chcon u:object_r:ksu_file:s0 "$image" 2>/dev/null || true
+    dd if=/dev/zero of="$new_image" bs=1024 count=0 seek="$image_kib" 2>/dev/null || { camera_fail "cannot create the image"; return 1; }
+    /system/bin/mkfs.ext4 -q -O ^has_journal -m 0 -L OOSCamera "$new_image" || { camera_fail "mkfs.ext4 failed"; return 1; }
+    chmod 0600 "$new_image"
+    chcon u:object_r:ksu_file:s0 "$new_image" 2>/dev/null || true
     mkdir -p "$stage" || return 1
-    mount -t ext4 -o loop,rw,nodev,nosuid,noatime "$image" "$stage" || { camera_fail "cannot loop-mount the image"; return 1; }
+    mount -t ext4 -o loop,rw,nodev,nosuid,noatime "$new_image" "$stage" || { camera_fail "cannot loop-mount the image"; return 1; }
     camera_image_ok=1
     cp -aL "$MODPATH/system/." "$stage/" || { camera_fail "copying the payload failed"; camera_image_ok=0; }
     # BusyBox cp does not reliably preserve security.selinux on this device.
@@ -113,6 +122,9 @@ EOF
     umount "$stage" || return 1
     rmdir "$stage" "$MODPATH/.camera-probe" || return 1
     [ "$camera_image_ok" = 1 ] || return 1
+    mv "$new_image" "$image" || return 1
+    chmod 0600 "$image"
+    chcon u:object_r:ksu_file:s0 "$image" 2>/dev/null || true
     # The image now owns the payload: avoid storing a second unpacked copy.
     rm -rf "$MODPATH/system"
 }

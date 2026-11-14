@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.3.12
+
+- Prepare the replacement camera image beside the module (`camera.img.new`)
+  and rename it over `camera.img` only after the overlay probe succeeds. This
+  keeps the current image intact if validation fails and avoids reformatting a
+  live image when a manager runs `customize.sh` in place. KernelSU stages
+  upgrades in `modules_update`, so the staged image is used on the next boot.
+
 ## 2.3.11
 
 - Payload libraries are stripped of debug/unneeded sections when that makes
